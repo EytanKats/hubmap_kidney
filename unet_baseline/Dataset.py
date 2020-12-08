@@ -97,11 +97,12 @@ class Dataset(BaseDataset):
         data = tf.keras.applications.resnet50.preprocess_input(data)
 
         # Label preprocessing
-        label = cv2.resize(label, self.resize_shape, interpolation=cv2.INTER_NEAREST)
-        label = np.expand_dims(label, axis=2)
+        if label is not None:
+            label = cv2.resize(label, self.resize_shape, interpolation=cv2.INTER_NEAREST)
+            label = np.expand_dims(label, axis=2)
 
-        label = label.astype('float32')
-        label = label / 255.0  # normalize to the range 0-1
+            label = label.astype('float32')
+            label = label / 255.0  # normalize to the range 0-1
 
         return data, label
 
