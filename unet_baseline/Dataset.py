@@ -39,7 +39,7 @@ class Dataset(BaseDataset):
         self.predictions_dir = "predictions"
 
         # Fields to be filled during execution
-        self.metric_scores = pd.DataFrame([], columns=["dice", "precision", "recall"])
+        self.metrics_scores = pd.DataFrame([], columns=["dice", "precision", "recall"])
 
     def parse_args(self, **kwargs):
 
@@ -143,9 +143,9 @@ class Dataset(BaseDataset):
         labels = test_data[1]
 
         # Calculate metrics
-        dice_scores = [dice(test_predictions[idx], labels[idx]) for idx in range(len(test_predictions))]
-        recall_scores = [recall(test_predictions[idx], labels[idx]) for idx in range(len(test_predictions))]
-        precision_scores = [precision(test_predictions[idx], labels[idx]) for idx in range(len(test_predictions))]
+        dice_scores = [[dice(test_predictions[idx], labels[idx])] for idx in range(len(test_predictions))]
+        recall_scores = [[recall(test_predictions[idx], labels[idx])] for idx in range(len(test_predictions))]
+        precision_scores = [[precision(test_predictions[idx], labels[idx])] for idx in range(len(test_predictions))]
 
         # Save metrics to calculate statistics over folds
         stack = np.hstack((dice_scores, recall_scores, precision_scores))
