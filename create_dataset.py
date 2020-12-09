@@ -39,12 +39,12 @@ for idx, rle_encoding in df_rle_encodings.iterrows():
 
             if num_mask_positive_pixels > 100:
 
-                output_path_mask = os.path.join(output_images_dir, idx + "_" + str(x) + "_" + str(y) + "_" + "mask" + ".png")
+                output_path_mask = os.path.join(output_masks_dir, idx + "_" + str(x) + "_" + str(y) + "_" + "mask" + ".png")
                 tile_mask = (tile_mask * 255).astype(np.uint8)
                 cv2.resize(tile_mask, resize_shape, interpolation=cv2.INTER_NEAREST)
                 cv2.imwrite(output_path_mask, tile_mask)
 
-                output_path_image = os.path.join(output_masks_dir, idx + "_" + str(x) + "_" + str(y) + "_" + "image" + ".png")
+                output_path_image = os.path.join(output_images_dir, idx + "_" + str(x) + "_" + str(y) + "_" + "image" + ".png")
                 tile_image = image[y: y + tile_size, x: x + tile_size]
                 cv2.resize(tile_image, resize_shape, interpolation=cv2.INTER_NEAREST)
                 cv2.imwrite(output_path_image, tile_image)
