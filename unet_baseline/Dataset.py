@@ -170,7 +170,7 @@ class Dataset(BaseDataset):
         if not os.path.exists(auxiliary_output_dir):
             os.makedirs(auxiliary_output_dir)
 
-        for prediction_idx, prediction in enumerate(predictions[0]):
+        for prediction_idx, prediction in enumerate(predictions):
 
             info_row = data_info.iloc[prediction_idx]
             img_name = os.path.basename(info_row[self.data_path_column])
@@ -187,7 +187,7 @@ class Dataset(BaseDataset):
             contour_colors.append((0, 0, 255))  # blue contour for prediction
 
             if run_mode == RunMode.TEST:
-                masks.append(original_data[0][prediction_idx])
+                masks.append(original_data[1][prediction_idx])
                 contour_colors.append((0, 255, 0))  # green contour for ground truth
 
             output_path = os.path.join(output_dir, "auxiliary", img_name)
