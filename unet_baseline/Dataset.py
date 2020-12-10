@@ -143,9 +143,9 @@ class Dataset(BaseDataset):
         labels = test_data[1]
 
         # Calculate metrics
-        dice_scores = [[dice(test_predictions[idx], labels[idx])] for idx in range(len(test_predictions))]
-        recall_scores = [[recall(test_predictions[idx], labels[idx])] for idx in range(len(test_predictions))]
-        precision_scores = [[precision(test_predictions[idx], labels[idx])] for idx in range(len(test_predictions))]
+        dice_scores = [[dice(test_predictions[idx], labels[idx][..., 0])] for idx in range(len(test_predictions))]
+        recall_scores = [[recall(test_predictions[idx], labels[idx][..., 0])] for idx in range(len(test_predictions))]
+        precision_scores = [[precision(test_predictions[idx], labels[idx][..., 0])] for idx in range(len(test_predictions))]
 
         # Save metrics to calculate statistics over folds
         stack = np.hstack((dice_scores, recall_scores, precision_scores))
@@ -181,7 +181,7 @@ class Dataset(BaseDataset):
             masks = list()
             contour_colors = list()
 
-            resized_prediction = cv2.resize(prediction[..., 0], (rgb_image.shape[1], rgb_image.shape[0]), interpolation=cv2.INTER_NEAREST)
+            resized_prediction = cv2.resize(prediction, (rgb_image.shape[1], rgb_image.shape[0]), interpolation=cv2.INTER_NEAREST)
             resized_prediction = resized_prediction.astype(np.uint8) * 255
             masks.append(resized_prediction)
             contour_colors.append((0, 0, 255))  # blue contour for prediction
@@ -190,7 +190,7 @@ class Dataset(BaseDataset):
                 masks.append(original_data[1][prediction_idx])
                 contour_colors.append((0, 255, 0))  # green contour for ground truth
 
-            output_path = os.path.join(output_dir, "auxiliary", img_name)
+            output_path = os.path.join(output_dir, img_name)
             contours_plot(image, masks, contour_colors, outputs_path=output_path)
 
             auxiliary_output_path = os.path.join(output_dir, "auxiliary", img_name)
