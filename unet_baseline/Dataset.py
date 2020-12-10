@@ -39,7 +39,7 @@ class Dataset(BaseDataset):
         self.predictions_dir = "predictions"
 
         # Fields to be filled during execution
-        self.metric_scores = pd.DataFrame([], columns=["dice", "precision", "recall"])
+        self.metrics_scores = pd.DataFrame([], columns=["dice", "precision", "recall"])
 
     def parse_args(self, **kwargs):
 
@@ -97,11 +97,12 @@ class Dataset(BaseDataset):
         data = tf.keras.applications.resnet50.preprocess_input(data)
 
         # Label preprocessing
-        label = cv2.resize(label, self.resize_shape, interpolation=cv2.INTER_NEAREST)
-        label = np.expand_dims(label, axis=2)
+        if label is not None:
+            label = cv2.resize(label, self.resize_shape, interpolation=cv2.INTER_NEAREST)
+            label = np.expand_dims(label, axis=2)
 
-        label = label.astype('float32')
-        label = label / 255.0  # normalize to the range 0-1
+            label = label.astype('float32')
+            label = label / 255.0  # normalize to the range 0-1
 
         return data, label
 
@@ -142,9 +143,9 @@ class Dataset(BaseDataset):
         labels = test_data[1]
 
         # Calculate metrics
-        dice_scores = [dice(test_predictions[idx], labels[idx]) for idx in range(len(test_predictions))]
-        recall_scores = [recall(test_predictions[idx], labels[idx]) for idx in range(len(test_predictions))]
-        precision_scores = [precision(test_predictions[idx], labels[idx]) for idx in range(len(test_predictions))]
+        dice_scores = [[dice(test_predictions[idx], labels[idx][..., 0])] for idx in range(len(test_predictions))]
+        recall_scores = [[recall(test_predictions[idx], labels[idx][..., 0])] for idx in range(len(test_predictions))]
+        precision_scores = [[precision(test_predictions[idx], labels[idx][..., 0])] for idx in range(len(test_predictions))]
 
         # Save metrics to calculate statistics over folds
         stack = np.hstack((dice_scores, recall_scores, precision_scores))
@@ -169,7 +170,7 @@ class Dataset(BaseDataset):
         if not os.path.exists(auxiliary_output_dir):
             os.makedirs(auxiliary_output_dir)
 
-        for prediction_idx, prediction in enumerate(predictions[0]):
+        for prediction_idx, prediction in enumerate(predictions):
 
             info_row = data_info.iloc[prediction_idx]
             img_name = os.path.basename(info_row[self.data_path_column])
@@ -180,16 +181,16 @@ class Dataset(BaseDataset):
             masks = list()
             contour_colors = list()
 
-            resized_prediction = cv2.resize(prediction[..., 0], (rgb_image.shape[1], rgb_image.shape[0]), interpolation=cv2.INTER_NEAREST)
+            resized_prediction = cv2.resize(prediction, (rgb_image.shape[1], rgb_image.shape[0]), interpolation=cv2.INTER_NEAREST)
             resized_prediction = resized_prediction.astype(np.uint8) * 255
             masks.append(resized_prediction)
             contour_colors.append((0, 0, 255))  # blue contour for prediction
 
             if run_mode == RunMode.TEST:
-                masks.append(original_data[0][prediction_idx])
+                masks.append(original_data[1][prediction_idx])
                 contour_colors.append((0, 255, 0))  # green contour for ground truth
 
-            output_path = os.path.join(output_dir, "auxiliary", img_name)
+            output_path = os.path.join(output_dir, img_name)
             contours_plot(image, masks, contour_colors, outputs_path=output_path)
 
             auxiliary_output_path = os.path.join(output_dir, "auxiliary", img_name)
