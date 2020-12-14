@@ -10,5 +10,5 @@ settings = Settings()
 dataset = Dataset()
 generator = Generator()
 
-# Train
+# Run inference
 inference(settings, dataset, generator, models_collection)
