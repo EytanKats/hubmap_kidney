@@ -33,3 +33,5 @@ for inference_image_path in inference_images_paths:
             tile_image = image[y: y + tile_size, x: x + tile_size]
             cv2.resize(tile_image, resize_shape, interpolation=cv2.INTER_LINEAR)
             cv2.imwrite(output_path_image, tile_image)
+
+print("End of script")
