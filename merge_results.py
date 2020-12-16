@@ -12,12 +12,26 @@ from utils.dataset_utils import load_dataset_file, rle_to_mask, mask_to_rle
 
 raw_images_dir = "../../Datasets/HuBMAP_Kidney/raw_data/images/train"
 rle_encodings_path = "../../Datasets/HuBMAP_Kidney/raw_data/annotations/train/train.csv"
-prediction_template = "../../Datasets/HuBMAP_Kidney/masks_1000/*.png"
 output_dir = "../../Datasets/HuBMAP_Kidney/test"
 
+prediction_template = "../../Datasets/HuBMAP_Kidney/masks_1000/*.png"
+
+folds = None
+simulation_dir = ""
+
+tile_size = 1000
 test = False
 
-prediction_paths = glob.glob(prediction_template)
+if folds is None:
+    prediction_paths = glob.glob(prediction_template)
+else:
+    prediction_paths = list()
+
+    for fold in folds:
+        fold_predictions_template = os.path.join(simulation_dir, str(fold), "predictions", "auxiliary", "*.png")
+        fold_prediction_paths = glob.glob(fold_predictions_template)
+        prediction_paths.extend(fold_prediction_paths)
+
 prediction_names = [pathlib.Path(prediction_path).stem for prediction_path in prediction_paths]
 
 # If in test mode load RLE encodings of masks in training data
@@ -58,6 +72,7 @@ for name in original_names:
         x = int(image_prediction_name.split('_')[1])
         y = int(image_prediction_name.split('_')[2])
 
+        prediction_mask = cv2.resize(prediction_mask, (tile_size, tile_size), interpolation=cv2.INTER_NEAREST)
         mask[y: y + 1000, x: x + 1000] = prediction_mask
 
     # Resize image and mask for visualization
@@ -91,19 +106,19 @@ for name in original_names:
     output_path = os.path.join(output_dir, name + ".png")
     overlay_plot(small_image, overlays, colors, outputs_path=output_path)
 
-    # If in test mode populate dataframe with metrics
-    # Else populate dataset with encodings
-    df_results["id"] = names
-    if test:
-        df_results["dice"] = dice_scores
-        df_results["precision"] = precision_scores
-        df_results["recall"] = recall_scores
-    else:
-        df_results["encoding"] = rle_encodings_result
+    print("Image {0} processed".format(name))
+
+# If in test mode populate dataframe with metrics
+# Else populate dataset with encodings
+df_results["id"] = names
+if test:
+    df_results["dice"] = dice_scores
+    df_results["precision"] = precision_scores
+    df_results["recall"] = recall_scores
+else:
+    df_results["encoding"] = rle_encodings_result
 
 output_df_path = os.path.join(output_dir, "results.csv")
 df_results.to_csv(output_df_path, index=False)
-
-print("Image {0} processed".format(name))
 
 print("End of script")
