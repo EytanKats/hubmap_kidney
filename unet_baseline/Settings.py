@@ -7,14 +7,14 @@ class Settings(object):
         self.dataset_args = dict()
 
         # Dataset obligatory fields
-        self.dataset_args["data_definition_file"] = "../../Datasets/HuBMAP_Kidney/ds_1/ds_1.csv"
+        self.dataset_args["data_definition_file"] = "../../Datasets/HuBMAP_Kidney/ds_sat_thr_1000.csv"
         self.dataset_args["data_path_column"] = "image"
         self.dataset_args["filters"] = dict()
 
         self.dataset_args["preload_labels"] = False
         self.dataset_args["preload_data"] = False
 
-        self.dataset_args["inference_batch_size"] = 16
+        self.dataset_args["inference_batch_size"] = 64
 
         # Dataset specific fields
         self.dataset_args["mask_path_column"] = "mask"
@@ -29,7 +29,7 @@ class Settings(object):
 
         self.generator_args["data_random_seed"] = 2020
 
-        self.generator_args["folds_num"] = 1
+        self.generator_args["folds_num"] = 8
 
         self.generator_args["data_info_folder"] = ""  # simulation folder (not fold folder)
         self.generator_args["train_data_file_name"] = "train_data.json"
@@ -70,7 +70,7 @@ class Settings(object):
         self.model_args["epochs"] = 3000
         self.model_args["steps_per_epoch"] = 0  # training script set this parameter according to samples number
         self.model_args["val_steps"] = 0  # training script set this parameter according to samples number
-        self.model_args["prediction_batch_size"] = 16
+        self.model_args["prediction_batch_size"] = 64
 
         # UNet arguments
         self.model_args["input_shape"] = (256, 256, 3)
@@ -79,8 +79,8 @@ class Settings(object):
         # Regularizer arguments
         self.model_args["regularizer_args"] = dict()
         self.model_args["regularizer_args"]["regularizer_name"] = "l1_l2_regularizer"
-        self.model_args["regularizer_args"]["l1_reg_factor"] = 1e-2
-        self.model_args["regularizer_args"]["l2_reg_factor"] = 1e-2
+        self.model_args["regularizer_args"]["l1_reg_factor"] = 0
+        self.model_args["regularizer_args"]["l2_reg_factor"] = 0
 
         # Losses arguments
         self.model_args["losses_args"] = list()
@@ -94,7 +94,7 @@ class Settings(object):
         # Optimizer arguments
         self.model_args["optimizer_args"] = dict()
         self.model_args["optimizer_args"]["optimizer_name"] = "adam_optimizer"
-        self.model_args["optimizer_args"]["learning_rate"] = 1e-3
+        self.model_args["optimizer_args"]["learning_rate"] = 1e-4
 
         # Metrics arguments
         self.model_args["metrics_args"] = list()
@@ -140,7 +140,7 @@ class Settings(object):
         self.model_args["callbacks_args"][3]["callback_name"] = "reduce_lr_on_plateau"
         self.model_args["callbacks_args"][3]["reduce_factor"] = 0.7
         self.model_args["callbacks_args"][3]["patience"] = 3
-        self.model_args["callbacks_args"][3]["min_lr"] = 1e-4
+        self.model_args["callbacks_args"][3]["min_lr"] = 1e-5
         self.model_args["callbacks_args"][3]["monitor"] = "val_loss"
 
         # Logger arguments ##############################################
@@ -162,7 +162,7 @@ class Settings(object):
         self.test_simulation = True
 
         # Model training settings
-        self.training_folds = [0]
+        self.training_folds = [0, 1, 2, 3, 4, 5, 6, 7]
         self.load_weights = False
         self.load_weights_path = ""  # list for train/test, string for inference
 
@@ -171,8 +171,9 @@ class Settings(object):
 
         self.logs_dir = self.simulation_folder
         self.log_message = "Kidney glomeruli segmentation\n" \
-                           "dl_framework v0.3.1\n" \
-                           "U-Net baseline"
+                           "dl_framework @ develop commit: add 'run_mode' argument to '_get_data' and 'get_label' methods\n" \
+                           "U-Net architecture\n" \
+                           "Using overlapped images during training"
 
         self.plot_metrics = ["loss", "dice_metric", "recall_metric", "precision_metric"]
 
