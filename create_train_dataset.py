@@ -63,7 +63,7 @@ df["raw_image_id"] = [el[0] for el in image_basename_split]
 df["x"] = [int(el[1]) for el in image_basename_split]
 df["y"] = [int(el[2]) for el in image_basename_split]
 
-df = df[df["x"] % 1000 == 0 & df["y"] % 1000 == 0]
+df = df[(df["x"] % 1000 == 0) & (df["y"] % 1000 == 0)]
 
 df.to_csv(output_dataset_file_path, index=False)
 
