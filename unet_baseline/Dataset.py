@@ -42,6 +42,7 @@ class Dataset(BaseDataset):
 
         self.x_offset = 0  # offset to augment file name during training
         self.y_offset = 0  # offset to augment file name during training
+
     def parse_args(self, **kwargs):
 
         """
@@ -142,9 +143,9 @@ class Dataset(BaseDataset):
             augmented_anchor_label_path = os.path.join(anchor_base_dir, augmented_anchor_label_name)
 
             if os.path.exists(augmented_anchor_label_path):
-                mask = cv2.imread(augmented_anchor_label_path)
+                mask = cv2.imread(augmented_anchor_label_path, cv2.IMREAD_GRAYSCALE)
             else:
-                mask = cv2.imread(anchor_label_path)
+                mask = cv2.imread(anchor_label_path, cv2.IMREAD_GRAYSCALE)
 
         return mask
 
