@@ -7,7 +7,6 @@ import seaborn as sns
 import tensorflow as tf
 
 from utils.RunMode import RunMode
-from utils.dataset_utils import mask_to_rle
 from plots.plots import contours_plot
 from metrics.metrics import dice, recall, precision
 from dataset.BaseDataset import BaseDataset
@@ -41,6 +40,9 @@ class Dataset(BaseDataset):
         # Fields to be filled during execution
         self.metrics_scores = pd.DataFrame([], columns=["dice", "precision", "recall"])
 
+        self.x_offset = 0  # offset to augment file name during training
+        self.y_offset = 0  # offset to augment file name during training
+
     def parse_args(self, **kwargs):
 
         """
@@ -73,14 +75,78 @@ class Dataset(BaseDataset):
         # Set display options for pandas
         pd.set_option("display.float_format", lambda x: "%.3f" % x)
 
-    def _get_data(self, info_row):
+    def _get_data(self, info_row, run_mode=RunMode.TRAINING):
 
-        data = cv2.imread(info_row[self.data_path_column])
+        if run_mode != run_mode.TRAINING:
+            data = cv2.imread(info_row[self.data_path_column])
+
+        else:
+
+            # Split anchor data name to components: name, x, y, suffix
+            anchor_data_path = info_row[self.data_path_column]
+            anchor_base_dir = os.path.dirname(anchor_data_path)
+            anchor_data_name = os.path.basename(anchor_data_path)
+            anchor_data_name_split = anchor_data_name.split("_")
+            anchor_name = anchor_data_name_split[0]
+            anchor_x = int(anchor_data_name_split[1])
+            anchor_y = int(anchor_data_name_split[2])
+            anchor_suffix = anchor_data_name_split[3]
+
+            # Augment x and y coordinates
+            self.x_offset = np.random.randint(0, 10) * 100
+            self.y_offset = np.random.randint(0, 10) * 100
+            augmented_x = anchor_x + self.x_offset
+            augmented_y = anchor_y + self.y_offset
+
+            # Combine augmented path
+            augmented_anchor_data_name = anchor_name + "_" + str(augmented_x) + "_" + str(augmented_y) + "_" + anchor_suffix
+            augmented_anchor_data_path = os.path.join(anchor_base_dir, augmented_anchor_data_name)
+
+            # Check that data with augmented name exists and if not try another time
+            cnt = 0
+            while not os.path.exists(augmented_anchor_data_path) and cnt < 10:
+
+                self.x_offset = np.random.randint(0, 10) * 100
+                self.y_offset = np.random.randint(0, 10) * 100
+                augmented_x = anchor_x + self.x_offset
+                augmented_y = anchor_x + self.y_offset
+
+                augmented_anchor_data_name = anchor_name + "_" + str(augmented_x) + "_" + str(augmented_y) + "_" + anchor_suffix
+                augmented_anchor_data_path = os.path.join(anchor_base_dir, augmented_anchor_data_name)
+                cnt += 1
+
+            if cnt < 10:  # data with augmented name exists
+                data = cv2.imread(augmented_anchor_data_path)
+            else:  # data with augmented name doesn't exists
+                data = cv2.imread(anchor_data_path)
+
         return data
 
-    def _get_label(self, info_row):
+    def _get_label(self, info_row, run_mode=RunMode.TRAINING):
 
-        mask = cv2.imread(info_row[self.mask_path_column], cv2.IMREAD_GRAYSCALE)
+        if run_mode != run_mode.TRAINING:
+            mask = cv2.imread(info_row[self.mask_path_column], cv2.IMREAD_GRAYSCALE)
+
+        else:
+
+            # Get augmented label path
+            anchor_label_path = info_row[self.mask_path_column]
+            anchor_base_dir = os.path.dirname(anchor_label_path)
+            anchor_label_name = os.path.basename(anchor_label_path)
+            anchor_label_name_split = anchor_label_name.split("_")
+            anchor_name = anchor_label_name_split[0]
+            augmented_x = self.x_offset + int(anchor_label_name_split[1])
+            augmented_y = self.y_offset + int(anchor_label_name_split[2])
+            anchor_suffix = anchor_label_name_split[3]
+
+            augmented_anchor_label_name = anchor_name + "_" + str(augmented_x) + "_" + str(augmented_y) + "_" + anchor_suffix
+            augmented_anchor_label_path = os.path.join(anchor_base_dir, augmented_anchor_label_name)
+
+            if os.path.exists(augmented_anchor_label_path):
+                mask = cv2.imread(augmented_anchor_label_path, cv2.IMREAD_GRAYSCALE)
+            else:
+                mask = cv2.imread(anchor_label_path, cv2.IMREAD_GRAYSCALE)
+
         return mask
 
     def _apply_augmentations(self, data, label):

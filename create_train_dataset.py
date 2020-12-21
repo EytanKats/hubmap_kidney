@@ -10,7 +10,7 @@ rle_encodings_path = "../../Datasets/HuBMAP_Kidney/raw_data/annotations/train/tr
 
 output_images_dir = "../../Datasets/HuBMAP_Kidney/images_sat_thr_1000"
 output_masks_dir = "../../Datasets/HuBMAP_Kidney/masks_sat_thr_1000"
-output_dataset_file_path = "../../Datasets/HuBMAP_Kidney/ds_1.csv"
+output_dataset_file_path = "../../Datasets/HuBMAP_Kidney/ds_sat_thr_1000.csv"
 
 tile_size = 1000
 tile_step = 1000
@@ -58,7 +58,13 @@ df = create_dataset(data_template=output_images_dir + "/*.png",
                     save_dataset_file=False,
                     output_dataset_file_path=output_dataset_file_path)
 
-df["raw_image_id"] = df["image_basename"].apply(lambda el: el.split('_')[0])
+image_basename_split = df["image_basename"].apply(lambda el: el.split('_'))
+df["raw_image_id"] = [el[0] for el in image_basename_split]
+df["x"] = [int(el[1]) for el in image_basename_split]
+df["y"] = [int(el[2]) for el in image_basename_split]
+
+df = df[(df["x"] % 1000 == 0) & (df["y"] % 1000 == 0)]
+
 df.to_csv(output_dataset_file_path, index=False)
 
 print("End of Script")
