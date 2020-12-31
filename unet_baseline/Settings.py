@@ -65,8 +65,7 @@ class Settings(object):
         self.model_args = dict()
 
         # Base model arguments
-        self.model_args["model_name"] = "unet"
-        self.model_args["load_weights_path"] = ""  # will be set by training script
+        self.model_args["model_name"] = "unet_custom"
         self.model_args["epochs"] = 3000
         self.model_args["steps_per_epoch"] = 0  # training script set this parameter according to samples number
         self.model_args["val_steps"] = 0  # training script set this parameter according to samples number
@@ -74,7 +73,8 @@ class Settings(object):
 
         # UNet arguments
         self.model_args["input_shape"] = (256, 256, 3)
-        self.model_args["classes_num"] = 1
+        self.model_args["num_classes"] = 1
+        self.model_args["output_activation"] = "sigmoid"
 
         # Regularizer arguments
         self.model_args["regularizer_args"] = dict()
@@ -120,7 +120,7 @@ class Settings(object):
         # Checkpoint callback arguments
         self.model_args["callbacks_args"].append(dict())
         self.model_args["callbacks_args"][0]["callback_name"] = "checkpoint_callback"
-        self.model_args["callbacks_args"][0]["checkpoint_weights_path"] = ""  # will be set by training script
+        self.model_args["callbacks_args"][0]["checkpoint_path"] = ""  # will be set by training script
         self.model_args["callbacks_args"][0]["save_best_only"] = True
         self.model_args["callbacks_args"][0]["monitor"] = "val_loss"
 
@@ -152,27 +152,25 @@ class Settings(object):
         # Output settings
         self.simulation_folder = "../../Simulations/HuBMAP_Kidney/test"
         self.save_tested_data = True
-        self.weights_name = "weights.h5"
         self.training_log_name = "metrics.log"
         self.settings_file_name = "unet_baseline/Settings.py"
-        self.model_architecture_file_name = "architecture.json"
-        self.saved_model_folder_name = "model"
+        self.saved_model_name = "model"
 
         # Test settings
         self.test_simulation = True
 
         # Model training settings
         self.training_folds = [0, 1, 2, 3, 4, 5, 6, 7]
-        self.load_weights = False
-        self.load_weights_path = ""  # list for train/test, string for inference
+        self.load_model = False
+        self.load_model_path = ""  # list for train/test, string for inference
 
         # Inference settings
         self.inference_data_pattern = ""
 
         self.logs_dir = self.simulation_folder
         self.log_message = "Kidney glomeruli segmentation\n" \
-                           "dl_framework @ develop commit: add 'run_mode' argument to '_get_data' and 'get_label' methods\n" \
-                           "U-Net architecture\n" \
+                           "dl_framework @ resnet commit: fix names and add workarounds to saving/loading tensorflow model'\n" \
+                           "Custom U-Net architecture\n" \
                            "Using overlapped images during training"
 
         self.plot_metrics = ["loss", "dice_metric", "recall_metric", "precision_metric"]
