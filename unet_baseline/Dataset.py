@@ -2,9 +2,11 @@ import os
 import cv2
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+import imgaug as ia
 import tensorflow as tf
+import seaborn as sns
+import matplotlib.pyplot as plt
+
 
 from utils.RunMode import RunMode
 from plots.plots import contours_plot
@@ -151,7 +153,19 @@ class Dataset(BaseDataset):
 
     def _apply_augmentations(self, data, label):
 
-        return data, label
+        aug = ia.augmenters.Sequential([ia.augmenters.Fliplr(0.5),
+                                        ia.augmenters.Flipud(0.5),
+                                        ia.augmenters.Rot90([0, 1, 2, 3])])
+
+        label = np.expand_dims(label, axis=2)
+        seg_map = ia.augmentables.SegmentationMapsOnImage(label, shape=label.shape)
+
+        data_aug, seg_map_aug = aug(image=data, segmentation_maps=seg_map)
+
+        label_aug = seg_map_aug.get_arr()
+        label_aug = np.squeeze(label_aug, axis=2)
+
+        return data_aug, label_aug
 
     def _apply_preprocessing(self, data, label, info_row, run_mode=RunMode.TRAINING):
 
