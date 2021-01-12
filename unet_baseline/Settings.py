@@ -7,7 +7,7 @@ class Settings(object):
         self.dataset_args = dict()
 
         # Dataset obligatory fields
-        self.dataset_args["data_definition_file"] = "../../Datasets/HuBMAP_Kidney/ds_sat_thr_1000.csv"
+        self.dataset_args["data_definition_file"] = "../../Datasets/HuBMAP_Kidney/ds_sat_thr_size1000_step1000_sampled.csv"
         self.dataset_args["data_path_column"] = "image"
         self.dataset_args["filters"] = dict()
 
@@ -54,7 +54,7 @@ class Settings(object):
         self.generator_args["sequence_args"] = dict()
 
         self.generator_args["sequence_args"]["batch_size"] = 16
-        self.generator_args["sequence_args"]["apply_augmentations"] = False
+        self.generator_args["sequence_args"]["apply_augmentations"] = True
 
         self.generator_args["sequence_args"]["multi_input"] = False
         self.generator_args["sequence_args"]["multi_output"] = False
@@ -150,7 +150,7 @@ class Settings(object):
         self.logger_args["file_name"] = "results.log"
 
         # Output settings
-        self.simulation_folder = "../../Simulations/HuBMAP_Kidney/test"
+        self.simulation_folder = "../../Simulations/HuBMAP_Kidney/2021.01.11_basic_aug"
         self.save_tested_data = True
         self.training_log_name = "metrics.log"
         self.settings_file_name = "unet_baseline/Settings.py"
@@ -160,7 +160,7 @@ class Settings(object):
         self.test_simulation = True
 
         # Model training settings
-        self.training_folds = [0, 1, 2, 3, 4, 5, 6, 7]
+        self.training_folds = [1, 4, 6]
         self.load_model = False
         self.load_model_path = ""  # list for train/test, string for inference
 
@@ -170,8 +170,9 @@ class Settings(object):
         self.logs_dir = self.simulation_folder
         self.log_message = "Kidney glomeruli segmentation\n" \
                            "dl_framework @ resnet commit: fix names and add workarounds to saving/loading tensorflow model'\n" \
-                           "Custom U-Net architecture\n" \
-                           "Using overlapped images during training"
+                           "Custom UNet architecture\n" \
+                           "Using overlapped images during training\n" \
+                           "Using basic augmentations: flip left-right, flip up-down, rotations to 90/180/270 degrees\n"
 
         self.plot_metrics = ["loss", "dice_metric", "recall_metric", "precision_metric"]
 
