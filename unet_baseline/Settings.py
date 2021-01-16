@@ -132,14 +132,14 @@ class Settings(object):
         # Early stopping callback arguments
         self.model_args["callbacks_args"].append(dict())
         self.model_args["callbacks_args"][2]["callback_name"] = "early_stopping_callback"
-        self.model_args["callbacks_args"][2]["patience"] = 15
+        self.model_args["callbacks_args"][2]["patience"] = 20
         self.model_args["callbacks_args"][2]["monitor"] = "val_loss"
 
         # Reduce learning rate callback arguments
         self.model_args["callbacks_args"].append(dict())
         self.model_args["callbacks_args"][3]["callback_name"] = "reduce_lr_on_plateau"
         self.model_args["callbacks_args"][3]["reduce_factor"] = 0.7
-        self.model_args["callbacks_args"][3]["patience"] = 3
+        self.model_args["callbacks_args"][3]["patience"] = 4
         self.model_args["callbacks_args"][3]["min_lr"] = 1e-5
         self.model_args["callbacks_args"][3]["monitor"] = "val_loss"
 
@@ -150,7 +150,7 @@ class Settings(object):
         self.logger_args["file_name"] = "results.log"
 
         # Output settings
-        self.simulation_folder = "../../Simulations/HuBMAP_Kidney/2021.01.11_basic_aug+batch_32"
+        self.simulation_folder = "../../Simulations/HuBMAP_Kidney/2021.01.11_basic_aug+elastic"
         self.save_tested_data = True
         self.training_log_name = "metrics.log"
         self.settings_file_name = "unet_baseline/Settings.py"
@@ -172,7 +172,8 @@ class Settings(object):
                            "dl_framework @ resnet commit: fix names and add workarounds to saving/loading tensorflow model'\n" \
                            "Custom UNet architecture\n" \
                            "Using overlapped images during training\n" \
-                           "Using basic augmentations: flip left-right, flip up-down, rotations to 90/180/270 degrees\n"
+                           "Using basic augmentations: flip left-right, flip up-down, rotations to 90/180/270 degrees\n" \
+                           "Using elastic augmentations"
 
         self.plot_metrics = ["loss", "dice_metric", "recall_metric", "precision_metric"]
 

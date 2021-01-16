@@ -155,7 +155,8 @@ class Dataset(BaseDataset):
 
         aug = ia.augmenters.Sequential([ia.augmenters.Fliplr(0.5),
                                         ia.augmenters.Flipud(0.5),
-                                        ia.augmenters.Rot90([0, 1, 2, 3])])
+                                        ia.augmenters.Rot90([0, 1, 2, 3]),
+                                        ia.augmenters.PiecewiseAffine(scale=(0.01, 0.06))])
 
         label = np.expand_dims(label, axis=2)
         seg_map = ia.augmentables.SegmentationMapsOnImage(label, shape=label.shape)
