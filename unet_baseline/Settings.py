@@ -53,7 +53,7 @@ class Settings(object):
         # Sequence arguments obligatory fields
         self.generator_args["sequence_args"] = dict()
 
-        self.generator_args["sequence_args"]["batch_size"] = 16
+        self.generator_args["sequence_args"]["batch_size"] = 32
         self.generator_args["sequence_args"]["apply_augmentations"] = True
 
         self.generator_args["sequence_args"]["multi_input"] = False
