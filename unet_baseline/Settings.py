@@ -53,7 +53,7 @@ class Settings(object):
         # Sequence arguments obligatory fields
         self.generator_args["sequence_args"] = dict()
 
-        self.generator_args["sequence_args"]["batch_size"] = 16
+        self.generator_args["sequence_args"]["batch_size"] = 32
         self.generator_args["sequence_args"]["apply_augmentations"] = True
 
         self.generator_args["sequence_args"]["multi_input"] = False
@@ -150,7 +150,7 @@ class Settings(object):
         self.logger_args["file_name"] = "results.log"
 
         # Output settings
-        self.simulation_folder = "../../Simulations/HuBMAP_Kidney/2021.01.11_basic_aug"
+        self.simulation_folder = "../../Simulations/HuBMAP_Kidney/2021.01.11_basic_aug+batch_32"
         self.save_tested_data = True
         self.training_log_name = "metrics.log"
         self.settings_file_name = "unet_baseline/Settings.py"
