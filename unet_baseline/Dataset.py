@@ -2,8 +2,9 @@ import os
 import cv2
 import numpy as np
 import pandas as pd
-import imgaug as ia
 import tensorflow as tf
+import albumentations as alb
+
 import seaborn as sns
 import matplotlib.pyplot as plt
 
@@ -153,18 +154,14 @@ class Dataset(BaseDataset):
 
     def _apply_augmentations(self, data, label):
 
-        aug = ia.augmenters.Sequential([ia.augmenters.Fliplr(0.5),
-                                        ia.augmenters.Flipud(0.5),
-                                        ia.augmenters.Rot90([0, 1, 2, 3]),
-                                        ia.augmenters.PiecewiseAffine(scale=(0.01, 0.06))])
+        transform = alb.Compose([alb.RandomRotate90(always_apply=True),
+                                 alb.HorizontalFlip(p=0.5),
+                                 alb.VerticalFlip(p=0.5),
+                                 alb.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2, p=0.5)])
 
-        label = np.expand_dims(label, axis=2)
-        seg_map = ia.augmentables.SegmentationMapsOnImage(label, shape=label.shape)
-
-        data_aug, seg_map_aug = aug(image=data, segmentation_maps=seg_map)
-
-        label_aug = seg_map_aug.get_arr()
-        label_aug = np.squeeze(label_aug, axis=2)
+        augmented = transform(image=data, mask=label)
+        data_aug = augmented["image"]
+        label_aug = augmented["mask"]
 
         return data_aug, label_aug
 
