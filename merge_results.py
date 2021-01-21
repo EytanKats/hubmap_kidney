@@ -116,9 +116,9 @@ if test:
     df_results["precision"] = precision_scores
     df_results["recall"] = recall_scores
 else:
-    df_results["encoding"] = rle_encodings_result
+    df_results["predicted"] = rle_encodings_result
 
-output_df_path = os.path.join(output_dir, "results.csv")
+output_df_path = os.path.join(output_dir, "submission.csv")
 df_results.to_csv(output_df_path, index=False)
 
 print("End of script")

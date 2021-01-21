@@ -37,7 +37,7 @@ for inference_image_path in inference_images_paths:
             if (s > sat_thr).sum() > num_pixels_thr:
 
                 output_path_image = os.path.join(tiles_dir, image_name + "_" + str(x) + "_" + str(y) + "_" + ".png")
-                cv2.resize(tile_image, resize_shape, interpolation=cv2.INTER_LINEAR)
+                tile_image = cv2.resize(tile_image, resize_shape, interpolation=cv2.INTER_LINEAR)
                 cv2.imwrite(output_path_image, tile_image)
 
 print("End of script")

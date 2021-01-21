@@ -150,7 +150,7 @@ class Settings(object):
         self.logger_args["file_name"] = "results.log"
 
         # Output settings
-        self.simulation_folder = "../../Simulations/HuBMAP_Kidney/2021.01.11_basic_aug+elastic"
+        self.simulation_folder = "../../Simulations/HuBMAP_Kidney/2021.01.19_basic_aug+color_aug"
         self.save_tested_data = True
         self.training_log_name = "metrics.log"
         self.settings_file_name = "unet_baseline/Settings.py"
@@ -173,7 +173,7 @@ class Settings(object):
                            "Custom UNet architecture\n" \
                            "Using overlapped images during training\n" \
                            "Using basic augmentations: flip left-right, flip up-down, rotations to 90/180/270 degrees\n" \
-                           "Using elastic augmentations"
+                           "Using color augmentations: brightness, color, hue, saturation"
 
         self.plot_metrics = ["loss", "dice_metric", "recall_metric", "precision_metric"]
 
