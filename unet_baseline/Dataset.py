@@ -156,8 +156,7 @@ class Dataset(BaseDataset):
 
         transform = alb.Compose([alb.RandomRotate90(always_apply=True),
                                  alb.HorizontalFlip(p=0.5),
-                                 alb.VerticalFlip(p=0.5),
-                                 alb.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2, p=0.5)])
+                                 alb.VerticalFlip(p=0.5)])
 
         augmented = transform(image=data, mask=label)
         data_aug = augmented["image"]
