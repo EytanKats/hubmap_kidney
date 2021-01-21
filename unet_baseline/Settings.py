@@ -65,16 +65,18 @@ class Settings(object):
         self.model_args = dict()
 
         # Base model arguments
-        self.model_args["model_name"] = "unet_custom"
+        self.model_args["model_name"] = "unet_3rd_party"
         self.model_args["epochs"] = 3000
         self.model_args["steps_per_epoch"] = 0  # training script set this parameter according to samples number
         self.model_args["val_steps"] = 0  # training script set this parameter according to samples number
         self.model_args["prediction_batch_size"] = 64
 
         # UNet arguments
+        self.model_args["backbone"] = "resnet50"
         self.model_args["input_shape"] = (256, 256, 3)
         self.model_args["num_classes"] = 1
         self.model_args["output_activation"] = "sigmoid"
+        self.model_args["encoder_weights"] = "imagenet"
 
         # Regularizer arguments
         self.model_args["regularizer_args"] = dict()
@@ -150,7 +152,7 @@ class Settings(object):
         self.logger_args["file_name"] = "results.log"
 
         # Output settings
-        self.simulation_folder = "../../Simulations/HuBMAP_Kidney/2021.01.19_basic_aug+color_aug"
+        self.simulation_folder = "../../Simulations/HuBMAP_Kidney/2021.01.20_3rd_party_unet_resnet_encoder_pretrained"
         self.save_tested_data = True
         self.training_log_name = "metrics.log"
         self.settings_file_name = "unet_baseline/Settings.py"
@@ -169,11 +171,10 @@ class Settings(object):
 
         self.logs_dir = self.simulation_folder
         self.log_message = "Kidney glomeruli segmentation\n" \
-                           "dl_framework @ resnet commit: fix names and add workarounds to saving/loading tensorflow model'\n" \
-                           "Custom UNet architecture\n" \
+                           "dl_framework @ develop commit: integrated UNet model with different backbones from 'segmentation_models' package\n" \
+                           "'Segmentation Models' UNet architecture with ResNet pretrained backbone\n" \
                            "Using overlapped images during training\n" \
-                           "Using basic augmentations: flip left-right, flip up-down, rotations to 90/180/270 degrees\n" \
-                           "Using color augmentations: brightness, color, hue, saturation"
+                           "Using basic augmentations: flip left-right, flip up-down, rotations to 90/180/270 degrees"
 
         self.plot_metrics = ["loss", "dice_metric", "recall_metric", "precision_metric"]
 
