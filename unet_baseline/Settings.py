@@ -72,7 +72,7 @@ class Settings(object):
         self.model_args["prediction_batch_size"] = 64
 
         # UNet arguments
-        self.model_args["backbone"] = "resnet50"
+        self.model_args["backbone"] = "efficientnetb2"
         self.model_args["input_shape"] = (256, 256, 3)
         self.model_args["num_classes"] = 1
         self.model_args["output_activation"] = "sigmoid"
@@ -152,7 +152,7 @@ class Settings(object):
         self.logger_args["file_name"] = "results.log"
 
         # Output settings
-        self.simulation_folder = "../../Simulations/HuBMAP_Kidney/2021.01.20_3rd_party_unet_resnet_encoder_pretrained"
+        self.simulation_folder = "../../Simulations/HuBMAP_Kidney/2021.01.21_3rd_party_unet_efficientnetb2_encoder_pretrained"
         self.save_tested_data = True
         self.training_log_name = "metrics.log"
         self.settings_file_name = "unet_baseline/Settings.py"
@@ -171,7 +171,7 @@ class Settings(object):
 
         self.logs_dir = self.simulation_folder
         self.log_message = "Kidney glomeruli segmentation\n" \
-                           "dl_framework @ develop commit: integrated UNet model with different backbones from 'segmentation_models' package\n" \
+                           "dl_framework @ develop commit: change default for 'CheckpointCallback' to save 'weights_only' to support saving model without compilation\n" \
                            "'Segmentation Models' UNet architecture with ResNet pretrained backbone\n" \
                            "Using overlapped images during training\n" \
                            "Using basic augmentations: flip left-right, flip up-down, rotations to 90/180/270 degrees"
