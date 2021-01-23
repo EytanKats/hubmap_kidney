@@ -53,7 +53,7 @@ class Settings(object):
         # Sequence arguments obligatory fields
         self.generator_args["sequence_args"] = dict()
 
-        self.generator_args["sequence_args"]["batch_size"] = 16
+        self.generator_args["sequence_args"]["batch_size"] = 8
         self.generator_args["sequence_args"]["apply_augmentations"] = True
 
         self.generator_args["sequence_args"]["multi_input"] = False
@@ -72,7 +72,7 @@ class Settings(object):
         self.model_args["prediction_batch_size"] = 64
 
         # UNet arguments
-        self.model_args["backbone"] = "efficientnetb3"
+        self.model_args["backbone"] = "efficientnetb6"
         self.model_args["input_shape"] = (256, 256, 3)
         self.model_args["num_classes"] = 1
         self.model_args["output_activation"] = "sigmoid"
@@ -152,7 +152,7 @@ class Settings(object):
         self.logger_args["file_name"] = "results.log"
 
         # Output settings
-        self.simulation_folder = "../../Simulations/HuBMAP_Kidney/2021.01.21_3rd_party_unet_efficientnetb3_encoder_pretrained"
+        self.simulation_folder = "../../Simulations/HuBMAP_Kidney/2021.01.22_3rd_party_unet_efficientnetb6_encoder_pretrained"
         self.save_tested_data = True
         self.training_log_name = "metrics.log"
         self.settings_file_name = "unet_baseline/Settings.py"
