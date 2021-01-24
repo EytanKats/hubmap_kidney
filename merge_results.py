@@ -79,7 +79,7 @@ for name in original_names:
     small_image = cv2.resize(image, (5000, 5000), interpolation=cv2.INTER_LINEAR)
     small_image = cv2.cvtColor(small_image, cv2.COLOR_RGB2GRAY)
 
-    small_mask = cv2.resize(mask, (5000, 5000), interpolation=cv2.INTER_LINEAR)
+    small_mask = cv2.resize(mask, (5000, 5000), interpolation=cv2.INTER_NEAREST)
 
     overlays = [small_mask]
     colors = [2]
@@ -93,7 +93,7 @@ for name in original_names:
         precision_scores.append(precision(mask / 255, gt_mask))
         recall_scores.append(recall(mask / 255, gt_mask))
 
-        small_gt_mask = cv2.resize(gt_mask, (5000, 5000), interpolation=cv2.INTER_LINEAR)
+        small_gt_mask = cv2.resize(gt_mask, (5000, 5000), interpolation=cv2.INTER_NEAREST)
         small_gt_mask = small_gt_mask * 255
 
         overlays.append(small_gt_mask)
