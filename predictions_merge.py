@@ -10,17 +10,23 @@ from plots.plots import overlay_plot
 from metrics.metrics import dice, precision, recall
 from utils.dataset_utils import load_dataset_file, rle_to_mask, mask_to_rle
 
-raw_images_dir = "../../Datasets/HuBMAP_Kidney/raw_data/images/train"
-rle_encodings_path = "../../Datasets/HuBMAP_Kidney/raw_data/annotations/train/train.csv"
-output_dir = "../../Datasets/HuBMAP_Kidney/test"
 
-prediction_template = "../../Datasets/HuBMAP_Kidney/masks_1000/*.png"
+raw_images_dir = "/data/eytank/datasets/hubmap_kidney/raw_data/images/train"
+rle_encodings_path = "/data/eytank/datasets/hubmap_kidney/raw_data/annotations/train/train.csv"
+output_dir = "/data/eytank/simulations/hubmap_kidney/2021.01.21_3rd_party_unet_efficientnetb5_encoder_pretrained/1/results_step_500/"
+
+prediction_template = "/data/eytank/simulations/hubmap_kidney/2021.01.21_3rd_party_unet_efficientnetb5_encoder_pretrained/1/predictions_step_500/predictions/auxiliary/*.png"
 
 folds = None
-simulation_dir = ""
+simulation_dir = "/data/eytank/simulations/hubmap_kidney/2020.12.19_unet_baseline_sat_thr_size1000_step1000_sampled_augmented"
 
 tile_size = 1000
-test = False
+test = True
+
+# Define merging mask that will multiply prediction mask
+merging_mask = np.zeros((1000, 1000), dtype=np.uint8)
+merging_mask[250:750, 250:750] = 1
+# merging_mask[...] = 1
 
 if folds is None:
     prediction_paths = glob.glob(prediction_template)
@@ -73,13 +79,14 @@ for name in original_names:
         y = int(image_prediction_name.split('_')[2])
 
         prediction_mask = cv2.resize(prediction_mask, (tile_size, tile_size), interpolation=cv2.INTER_NEAREST)
-        mask[y: y + 1000, x: x + 1000] = prediction_mask
+        prediction_mask = prediction_mask * merging_mask
+        mask[y: y + 1000, x: x + 1000] += prediction_mask
 
     # Resize image and mask for visualization
     small_image = cv2.resize(image, (5000, 5000), interpolation=cv2.INTER_LINEAR)
     small_image = cv2.cvtColor(small_image, cv2.COLOR_RGB2GRAY)
 
-    small_mask = cv2.resize(mask, (5000, 5000), interpolation=cv2.INTER_LINEAR)
+    small_mask = cv2.resize(mask, (5000, 5000), interpolation=cv2.INTER_NEAREST)
 
     overlays = [small_mask]
     colors = [2]
@@ -93,7 +100,7 @@ for name in original_names:
         precision_scores.append(precision(mask / 255, gt_mask))
         recall_scores.append(recall(mask / 255, gt_mask))
 
-        small_gt_mask = cv2.resize(gt_mask, (5000, 5000), interpolation=cv2.INTER_LINEAR)
+        small_gt_mask = cv2.resize(gt_mask, (5000, 5000), interpolation=cv2.INTER_NEAREST)
         small_gt_mask = small_gt_mask * 255
 
         overlays.append(small_gt_mask)

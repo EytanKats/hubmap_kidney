@@ -96,8 +96,8 @@ class Dataset(BaseDataset):
             anchor_suffix = anchor_data_name_split[3]
 
             # Augment x and y coordinates
-            self.x_offset = np.random.randint(0, 10) * 100
-            self.y_offset = np.random.randint(0, 10) * 100
+            self.x_offset = np.random.randint(0, 8) * 128
+            self.y_offset = np.random.randint(0, 8) * 128
             augmented_x = anchor_x + self.x_offset
             augmented_y = anchor_y + self.y_offset
 
@@ -107,10 +107,10 @@ class Dataset(BaseDataset):
 
             # Check that data with augmented name exists and if not try another time
             cnt = 0
-            while not os.path.exists(augmented_anchor_data_path) and cnt < 10:
+            while not os.path.exists(augmented_anchor_data_path) and cnt < 8:
 
-                self.x_offset = np.random.randint(0, 10) * 100
-                self.y_offset = np.random.randint(0, 10) * 100
+                self.x_offset = np.random.randint(0, 8) * 128
+                self.y_offset = np.random.randint(0, 8) * 128
                 augmented_x = anchor_x + self.x_offset
                 augmented_y = anchor_x + self.y_offset
 
@@ -118,7 +118,7 @@ class Dataset(BaseDataset):
                 augmented_anchor_data_path = os.path.join(anchor_base_dir, augmented_anchor_data_name)
                 cnt += 1
 
-            if cnt < 10:  # data with augmented name exists
+            if cnt < 8:  # data with augmented name exists
                 data = cv2.imread(augmented_anchor_data_path)
             else:  # data with augmented name doesn't exists
                 data = cv2.imread(anchor_data_path)
