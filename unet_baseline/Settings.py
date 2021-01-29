@@ -7,14 +7,15 @@ class Settings(object):
         self.dataset_args = dict()
 
         # Dataset obligatory fields
-        self.dataset_args["data_definition_file"] = "../../Datasets/HuBMAP_Kidney/ds_sat_thr_size1000_step1000_sampled.csv"
+        self.dataset_args["data_definition_file"] = "/data/eytank/datasets/hubmap_kidney/ds_tile1024_step1024_sampled.csv"
+        # self.dataset_args["data_definition_file"] = ""
         self.dataset_args["data_path_column"] = "image"
         self.dataset_args["filters"] = dict()
 
         self.dataset_args["preload_labels"] = False
         self.dataset_args["preload_data"] = False
 
-        self.dataset_args["inference_batch_size"] = 64
+        self.dataset_args["inference_batch_size"] = 256
 
         # Dataset specific fields
         self.dataset_args["mask_path_column"] = "mask"
@@ -53,7 +54,7 @@ class Settings(object):
         # Sequence arguments obligatory fields
         self.generator_args["sequence_args"] = dict()
 
-        self.generator_args["sequence_args"]["batch_size"] = 8
+        self.generator_args["sequence_args"]["batch_size"] = 16
         self.generator_args["sequence_args"]["apply_augmentations"] = True
 
         self.generator_args["sequence_args"]["multi_input"] = False
@@ -72,7 +73,7 @@ class Settings(object):
         self.model_args["prediction_batch_size"] = 64
 
         # UNet arguments
-        self.model_args["backbone"] = "efficientnetb6"
+        self.model_args["backbone"] = "efficientnetb4"
         self.model_args["input_shape"] = (256, 256, 3)
         self.model_args["num_classes"] = 1
         self.model_args["output_activation"] = "sigmoid"
@@ -96,7 +97,7 @@ class Settings(object):
         # Optimizer arguments
         self.model_args["optimizer_args"] = dict()
         self.model_args["optimizer_args"]["optimizer_name"] = "adam_optimizer"
-        self.model_args["optimizer_args"]["learning_rate"] = 1e-4
+        self.model_args["optimizer_args"]["learning_rate"] = 1e-3
 
         # Metrics arguments
         self.model_args["metrics_args"] = list()
@@ -134,15 +135,15 @@ class Settings(object):
         # Early stopping callback arguments
         self.model_args["callbacks_args"].append(dict())
         self.model_args["callbacks_args"][2]["callback_name"] = "early_stopping_callback"
-        self.model_args["callbacks_args"][2]["patience"] = 20
+        self.model_args["callbacks_args"][2]["patience"] = 40
         self.model_args["callbacks_args"][2]["monitor"] = "val_loss"
 
         # Reduce learning rate callback arguments
         self.model_args["callbacks_args"].append(dict())
         self.model_args["callbacks_args"][3]["callback_name"] = "reduce_lr_on_plateau"
-        self.model_args["callbacks_args"][3]["reduce_factor"] = 0.7
-        self.model_args["callbacks_args"][3]["patience"] = 4
-        self.model_args["callbacks_args"][3]["min_lr"] = 1e-5
+        self.model_args["callbacks_args"][3]["reduce_factor"] = 0.8
+        self.model_args["callbacks_args"][3]["patience"] = 3
+        self.model_args["callbacks_args"][3]["min_lr"] = 1e-6
         self.model_args["callbacks_args"][3]["monitor"] = "val_loss"
 
         # Logger arguments ##############################################
@@ -152,7 +153,7 @@ class Settings(object):
         self.logger_args["file_name"] = "results.log"
 
         # Output settings
-        self.simulation_folder = "../../Simulations/HuBMAP_Kidney/2021.01.22_3rd_party_unet_efficientnetb6_encoder_pretrained"
+        self.simulation_folder = "/data/eytank/simulations/hubmap_kidney/2021.01.29_sm_unet_efficientnetb4_pretrained"
         self.save_tested_data = True
         self.training_log_name = "metrics.log"
         self.settings_file_name = "unet_baseline/Settings.py"
@@ -162,7 +163,7 @@ class Settings(object):
         self.test_simulation = True
 
         # Model training settings
-        self.training_folds = [1, 4, 6]
+        self.training_folds = [4, 6]
         self.load_model = False
         self.load_model_path = ""  # list for train/test, string for inference
 
@@ -172,7 +173,7 @@ class Settings(object):
         self.logs_dir = self.simulation_folder
         self.log_message = "Kidney glomeruli segmentation\n" \
                            "dl_framework @ develop commit: change default for 'CheckpointCallback' to save 'weights_only' to support saving model without compilation\n" \
-                           "'Segmentation Models' UNet architecture with EfficientNetB3 pretrained backbone\n" \
+                           "'Segmentation Models' UNet architecture with EfficientNetB4 pretrained backbone\n" \
                            "Using overlapped images during training\n" \
                            "Using basic augmentations: flip left-right, flip up-down, rotations to 90/180/270 degrees"
 
