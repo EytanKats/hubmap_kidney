@@ -162,6 +162,12 @@ class Dataset(BaseDataset):
         data_aug = augmented["image"]
         label_aug = augmented["mask"]
 
+        # img_id = np.random.randint(low=0, high=30)
+        # cv2.imwrite("/data/eytank/simulations/hubmap_kidney/img_" + str(img_id) + ".png", data)
+        # cv2.imwrite("/data/eytank/simulations/hubmap_kidney/img_aug_" + str(img_id) + ".png", data_aug)
+        # cv2.imwrite("/data/eytank/simulations/hubmap_kidney/lbl_" + str(img_id) + ".png", label)
+        # cv2.imwrite("/data/eytank/simulations/hubmap_kidney/lbl_aug_" + str(img_id) + ".png", label_aug)
+
         return data_aug, label_aug
 
     def _apply_preprocessing(self, data, label, info_row, run_mode=RunMode.TRAINING):

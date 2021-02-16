@@ -156,7 +156,7 @@ class Settings(object):
         self.simulation_folder = "/data/eytank/simulations/hubmap_kidney/2021.01.29_sm_unet_efficientnetb4_pretrained"
         self.save_tested_data = True
         self.training_log_name = "metrics.log"
-        self.settings_file_name = "unet_baseline/Settings.py"
+        self.settings_file_name = "unet/Settings.py"
         self.saved_model_name = "model"
 
         # Test settings

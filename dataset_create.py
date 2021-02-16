@@ -36,7 +36,7 @@ if train_dataset:
 
 # Extract patches from raw images
 raw_images_paths = glob.glob(raw_images_template)
-for raw_image_path in raw_images_paths[6:]:
+for raw_image_path in raw_images_paths:
 
     # Read image
     raw_image_name = pathlib.Path(raw_image_path).stem

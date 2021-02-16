@@ -25,8 +25,8 @@ test = True
 
 # Define merging mask that will multiply prediction mask
 merging_mask = np.zeros((1000, 1000), dtype=np.uint8)
-merging_mask[250:750, 250:750] = 1
-# merging_mask[...] = 1
+# merging_mask[250:750, 250:750] = 1
+merging_mask[...] = 1
 
 if folds is None:
     prediction_paths = glob.glob(prediction_template)
@@ -34,7 +34,7 @@ else:
     prediction_paths = list()
 
     for fold in folds:
-        fold_predictions_template = os.path.join(simulation_dir, str(fold), "predictions", "auxiliary", "*.png")
+        fold_predictions_template = os.path.join(simulation_dir, str(fold), "predictions_all_tiles", "predictions", "auxiliary", "*.png")
         fold_prediction_paths = glob.glob(fold_predictions_template)
         prediction_paths.extend(fold_prediction_paths)
 
