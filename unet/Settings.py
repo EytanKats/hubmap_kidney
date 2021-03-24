@@ -31,7 +31,7 @@ class Settings(object):
         self.data_splitter_args["group_ids"] = None
 
         self.data_splitter_args["leave_out"] = True  # allows to choose for test data with unique values of 'self.leave_out_param'
-        self.data_splitter_args["leave_out_param"] = "raw_image_id"
+        self.data_splitter_args["leave_out_column"] = "raw_image_id"
         self.data_splitter_args["leave_out_values"] = None
 
         # Sequence arguments
@@ -44,6 +44,11 @@ class Settings(object):
         self.sequence_args["multi_output"] = False
         self.sequence_args["inputs_num"] = 1
         self.sequence_args["outputs_num"] = 1
+
+        self.sequence_args["subsample"] = False
+        self.sequence_args["subsampling_param"] = ""
+        self.sequence_args["oversample"] = False
+        self.sequence_args["oversampling_param"] = ""
 
         # Model arguments ##############################################
         self.model_args = dict()
@@ -67,13 +72,13 @@ class Settings(object):
         self.model_args["regularizer_args"]["l2_reg_factor"] = 0
 
         # Losses arguments
-        self.model_args["losses_args"] = list()
+        self.model_args["loss_args"] = list()
 
-        self.model_args["losses_args"].append(dict())
-        self.model_args["losses_args"][0]["metric_name"] = "segmentation_metric"
-        self.model_args["losses_args"][0]["dice"] = True
-        self.model_args["losses_args"][0]["loss"] = True
-        self.model_args["losses_args"][0]["loss_weight"] = 1
+        self.model_args["loss_args"].append(dict())
+        self.model_args["loss_args"][0]["metric_name"] = "segmentation_metric"
+        self.model_args["loss_args"][0]["dice"] = True
+        self.model_args["loss_args"][0]["loss"] = True
+        self.model_args["loss_args"][0]["loss_weight"] = 1
 
         # Optimizer arguments
         self.model_args["optimizer_args"] = dict()
