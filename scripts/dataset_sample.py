@@ -1,6 +1,6 @@
 import cv2
 import pandas as pd
-from utils.dataset_utils import load_dataset_file
+from simple_converge.utils.dataset_utils import load_dataset_file
 
 # Calculate number of glomeruli pixels for every tile
 num_positive_pixels = list()

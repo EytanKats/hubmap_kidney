@@ -5,7 +5,7 @@ import pathlib
 import numpy as np
 import tifffile as tiff
 
-from utils.dataset_utils import load_dataset_file, rle_to_mask, create_dataset
+from simple_converge.utils.dataset_utils import load_dataset_file, rle_to_mask, create_dataset
 
 # Define settings
 raw_images_template = "/data/eytank/datasets/hubmap_kidney/raw_data/images/train/*.tiff"

@@ -6,9 +6,9 @@ import numpy as np
 import pandas as pd
 import tifffile as tiff
 
-from plots.plots import overlay_plot
-from metrics.metrics import dice, precision, recall
-from utils.dataset_utils import load_dataset_file, rle_to_mask, mask_to_rle
+from simple_converge.plots.plots import overlay_plot
+from simple_converge.metrics.metrics import dice, precision, recall
+from simple_converge.utils.dataset_utils import load_dataset_file, rle_to_mask, mask_to_rle
 
 
 raw_images_dir = "/data/eytank/datasets/hubmap_kidney/raw_data/images/train"

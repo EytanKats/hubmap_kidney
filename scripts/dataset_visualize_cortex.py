@@ -3,8 +3,8 @@ import cv2
 import numpy as np
 import tifffile as tiff
 
-from plots.plots import overlay_plot
-from utils.dataset_utils import load_dataset_file, rle_to_mask
+from simple_converge.plots.plots import overlay_plot
+from simple_converge.utils.dataset_utils import load_dataset_file, rle_to_mask
 
 
 raw_images_dir = "../../Datasets/HuBMAP_Kidney/raw_data/images/train"

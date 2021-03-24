@@ -8,9 +8,9 @@ import pandas as pd
 import tensorflow as tf
 import tifffile as tiff
 
-from plots.plots import overlay_plot
-from metrics.metrics import dice, precision, recall
-from utils.dataset_utils import rle_to_mask, mask_to_rle, load_dataset_file
+from simple_converge.plots.plots import overlay_plot
+from simple_converge.metrics.metrics import dice, precision, recall
+from simple_converge.utils.dataset_utils import rle_to_mask, mask_to_rle, load_dataset_file
 
 test = True
 

@@ -6,18 +6,7 @@ class Settings(object):
         # Dataset arguments ##############################################
         self.dataset_args = dict()
 
-        # Dataset obligatory fields
-        self.dataset_args["data_definition_file"] = "/data/eytank/datasets/hubmap_kidney/ds_tile1024_step1024_sampled.csv"
-        # self.dataset_args["data_definition_file"] = ""
         self.dataset_args["data_path_column"] = "image"
-        self.dataset_args["filters"] = dict()
-
-        self.dataset_args["preload_labels"] = False
-        self.dataset_args["preload_data"] = False
-
-        self.dataset_args["inference_batch_size"] = 256
-
-        # Dataset specific fields
         self.dataset_args["mask_path_column"] = "mask"
 
         self.dataset_args["resize_shape"] = (256, 256)
@@ -25,42 +14,36 @@ class Settings(object):
         self.dataset_args["postprocessing_thr"] = 0.5
         self.dataset_args["predictions_folder"] = "predictions"
 
-        # Generator arguments ##############################################
-        self.generator_args = dict()
+        # DataSplitter arguments ##############################################
+        self.data_splitter_args = dict()
 
-        self.generator_args["data_random_seed"] = 2020
+        self.data_splitter_args["data_definition_file_path"] = "/data/eytank/datasets/hubmap_kidney/ds_tile1024_step1024_sampled.csv"
 
-        self.generator_args["folds_num"] = 8
+        self.data_splitter_args["folds_num"] = 8
+        self.data_splitter_args["data_random_seed"] = 1509
 
-        self.generator_args["data_info_folder"] = ""  # simulation folder (not fold folder)
-        self.generator_args["train_data_file_name"] = "train_data.json"
-        self.generator_args["val_data_file_name"] = "val_data.json"
-        self.generator_args["test_data_file_name"] = "test_data.json"
+        self.data_splitter_args["train_data_file_name"] = "train_data.json"
+        self.data_splitter_args["val_data_file_name"] = "val_data.json"
+        self.data_splitter_args["test_data_file_name"] = "test_data.json"
 
-        self.generator_args["sample_training_info"] = False  # randomly choose number of rows from train info that was set
-        self.generator_args["training_data_rows"] = 0  # number of rows to randomly choose from train info that was set
+        self.data_splitter_args["split_to_groups"] = False
+        self.data_splitter_args["group_column"] = ""
+        self.data_splitter_args["group_ids"] = None
 
-        self.generator_args["train_split"] = 0.8
-        self.generator_args["test_split"] = 0.2  # useful only in 1-fold setting without leave out setting
+        self.data_splitter_args["leave_out"] = True  # allows to choose for test data with unique values of 'self.leave_out_param'
+        self.data_splitter_args["leave_out_param"] = "raw_image_id"
+        self.data_splitter_args["leave_out_values"] = None
 
-        self.generator_args["leave_out"] = True  # allows to choose for test data with unique values of 'self.leave_out_param'
-        self.generator_args["leave_out_param"] = "raw_image_id"
-        self.generator_args["leave_out_values"] = None # None or list of values
+        # Sequence arguments
+        self.sequence_args = dict()
 
-        self.generator_args["set_info"] = False  # set training, validation and test data info
-        self.generator_args["set_test_data_info"] = False  # set only test data info
-        self.generator_args["set_test_data_param"] = ""  # parameter based on which training-validation data will be cleaned from test samples
+        self.sequence_args["batch_size"] = 16
+        self.sequence_args["apply_augmentations"] = True
 
-        # Sequence arguments obligatory fields
-        self.generator_args["sequence_args"] = dict()
-
-        self.generator_args["sequence_args"]["batch_size"] = 16
-        self.generator_args["sequence_args"]["apply_augmentations"] = True
-
-        self.generator_args["sequence_args"]["multi_input"] = False
-        self.generator_args["sequence_args"]["multi_output"] = False
-        self.generator_args["sequence_args"]["inputs_num"] = 1
-        self.generator_args["sequence_args"]["outputs_num"] = 1
+        self.sequence_args["multi_input"] = False
+        self.sequence_args["multi_output"] = False
+        self.sequence_args["inputs_num"] = 1
+        self.sequence_args["outputs_num"] = 1
 
         # Model arguments ##############################################
         self.model_args = dict()
@@ -68,8 +51,6 @@ class Settings(object):
         # Base model arguments
         self.model_args["model_name"] = "unet_3rd_party"
         self.model_args["epochs"] = 3000
-        self.model_args["steps_per_epoch"] = 0  # training script set this parameter according to samples number
-        self.model_args["val_steps"] = 0  # training script set this parameter according to samples number
         self.model_args["prediction_batch_size"] = 64
 
         # UNet arguments
@@ -154,28 +135,34 @@ class Settings(object):
 
         # Output settings
         self.simulation_folder = "/data/eytank/simulations/hubmap_kidney/2021.01.29_sm_unet_efficientnetb4_pretrained"
-        self.save_tested_data = True
         self.training_log_name = "metrics.log"
-        self.settings_file_name = "unet/Settings.py"
+        self.settings_file_name = "../Settings.py"
         self.saved_model_name = "model"
+
+        # ClearML settings
+        self.clear_ml = False
+        self.clear_ml_project_name = ""
+        self.clear_ml_task_name = ""
+        self.clear_ml_connect_frameworks = {}
 
         # Test settings
         self.test_simulation = True
+        self.get_original_data = True
+        self.save_test_data = True
+
+        # Inference settings
+        self.inference_data_pattern = ""
 
         # Model training settings
         self.training_folds = [4, 6]
         self.load_model = False
         self.load_model_path = ""  # list for train/test, string for inference
 
-        # Inference settings
-        self.inference_data_pattern = ""
-
         self.logs_dir = self.simulation_folder
         self.log_message = "Kidney glomeruli segmentation\n" \
-                           "dl_framework @ develop commit: change default for 'CheckpointCallback' to save 'weights_only' to support saving model without compilation\n" \
+                           "simple_converge 0.5.6\n" \
                            "'Segmentation Models' UNet architecture with EfficientNetB4 pretrained backbone\n" \
                            "Using overlapped images during training\n" \
                            "Using basic augmentations: flip left-right, flip up-down, rotations to 90/180/270 degrees"
 
         self.plot_metrics = ["loss", "dice_metric", "recall_metric", "precision_metric"]
-
