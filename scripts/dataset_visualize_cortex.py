@@ -3,8 +3,8 @@ import cv2
 import numpy as np
 import tifffile as tiff
 
-from plots.plots import overlay_plot
-from utils.dataset_utils import load_dataset_file, rle_to_mask
+from simple_converge.plots.plots import overlay_plot
+from simple_converge.utils.dataset_utils import load_dataset_file, rle_to_mask
 
 
 raw_images_dir = "../../Datasets/HuBMAP_Kidney/raw_data/images/train"
@@ -22,6 +22,8 @@ for idx, rle_encoding in df_rle_encodings.iterrows():
 
     if len(image.shape) == 5:
         image = image.squeeze()
+        image = np.transpose(image, (1, 2, 0))
+    elif len(image.shape) == 3 and image.shape[0] == 3:
         image = np.transpose(image, (1, 2, 0))
 
     # Get binary glomeruli mask from RLE encoding

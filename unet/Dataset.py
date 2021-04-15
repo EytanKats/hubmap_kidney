@@ -8,11 +8,10 @@ import albumentations as alb
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-
-from utils.RunMode import RunMode
-from plots.plots import contours_plot
-from metrics.metrics import dice, recall, precision
-from dataset.BaseDataset import BaseDataset
+from simple_converge.utils.RunMode import RunMode
+from simple_converge.plots.plots import contours_plot
+from simple_converge.metrics.metrics import dice, recall, precision
+from simple_converge.data.BaseDataset import BaseDataset
 
 
 class Dataset(BaseDataset):
@@ -31,6 +30,7 @@ class Dataset(BaseDataset):
         super(Dataset, self).__init__()
 
         # Fields to be filled by parsing
+        self.data_path_column = ""
         self.mask_path_column = ""
 
         self.resize_shape = (256, 256)
@@ -56,6 +56,9 @@ class Dataset(BaseDataset):
 
         super(Dataset, self).parse_args(**kwargs)
 
+        if "data_path_column" in self.params.keys():
+            self.data_path_column = self.params["data_path_column"]
+
         if "mask_path_column" in self.params.keys():
             self.mask_path_column = self.params["mask_path_column"]
 
@@ -71,14 +74,10 @@ class Dataset(BaseDataset):
         if "predictions_dir" in self.params.keys():
             self.predictions_dir = self.params["predictions_dir"]
 
-    def initialize_dataset(self, run_mode=RunMode.TRAINING):
-
-        super(Dataset, self).initialize_dataset(run_mode=run_mode)
-
         # Set display options for pandas
         pd.set_option("display.float_format", lambda x: "%.3f" % x)
 
-    def _get_data(self, info_row, run_mode=RunMode.TRAINING):
+    def get_data(self, info_row, run_mode=RunMode.TRAINING):
 
         if run_mode != run_mode.TRAINING:
             data = cv2.imread(info_row[self.data_path_column])
@@ -125,7 +124,7 @@ class Dataset(BaseDataset):
 
         return data
 
-    def _get_label(self, info_row, run_mode=RunMode.TRAINING):
+    def get_label(self, info_row, run_mode=RunMode.TRAINING):
 
         if run_mode != run_mode.TRAINING:
             mask = cv2.imread(info_row[self.mask_path_column], cv2.IMREAD_GRAYSCALE)
@@ -152,7 +151,8 @@ class Dataset(BaseDataset):
 
         return mask
 
-    def _apply_augmentations(self, data, label):
+    def apply_augmentations(self, data, label=None,
+                            info_row=None, run_mode=RunMode.TRAINING):
 
         transform = alb.Compose([alb.RandomRotate90(always_apply=True),
                                  alb.HorizontalFlip(p=0.5),
@@ -162,9 +162,16 @@ class Dataset(BaseDataset):
         data_aug = augmented["image"]
         label_aug = augmented["mask"]
 
+        # img_id = np.random.randint(low=0, high=30)
+        # cv2.imwrite("/data/eytank/simulations/hubmap_kidney/img_" + str(img_id) + ".png", data)
+        # cv2.imwrite("/data/eytank/simulations/hubmap_kidney/img_aug_" + str(img_id) + ".png", data_aug)
+        # cv2.imwrite("/data/eytank/simulations/hubmap_kidney/lbl_" + str(img_id) + ".png", label)
+        # cv2.imwrite("/data/eytank/simulations/hubmap_kidney/lbl_aug_" + str(img_id) + ".png", label_aug)
+
         return data_aug, label_aug
 
-    def _apply_preprocessing(self, data, label, info_row, run_mode=RunMode.TRAINING):
+    def apply_preprocessing(self, data, label=None,
+                            info_row=None, run_mode=RunMode.TRAINING):
 
         # Data preprocessing
         data = cv2.resize(data, self.resize_shape, interpolation=cv2.INTER_LINEAR)
@@ -183,10 +190,16 @@ class Dataset(BaseDataset):
 
         return data, label
 
-    def apply_postprocessing(self, test_predictions, test_data, original_test_data, data_info, fold_num, run_mode=RunMode.TRAINING):
+    def apply_postprocessing_on_predictions_batch(self,
+                                                  predictions,
+                                                  preprocessed_data_and_labels=None,
+                                                  not_preprocessed_data_and_labels=None,
+                                                  batch_df=None,
+                                                  batch_id=0,
+                                                  run_mode=RunMode.TEST):
 
         post_processed_predictions = list()
-        for prediction_idx, prediction in enumerate(test_predictions):
+        for prediction_idx, prediction in enumerate(predictions):
 
             # Apply threshold on predicted mask
             _, post_processed_prediction = cv2.threshold(prediction[..., 0], self.postprocessing_thr, 1, cv2.THRESH_BINARY)
@@ -215,77 +228,98 @@ class Dataset(BaseDataset):
 
         return postprocessed_mask
 
-    def calculate_fold_metrics(self, test_predictions, test_data, *_):
+    def calculate_batch_metrics(self,
+                                postprocessed_predictions,
+                                preprocessed_data_and_labels=None,
+                                not_preprocessed_data_and_labels=None,
+                                batch_df=None,
+                                batch_id=0,
+                                output_dir=None):
 
-        labels = test_data[1]
+        labels = preprocessed_data_and_labels[1]
 
         # Calculate metrics
-        dice_scores = [[dice(test_predictions[idx], labels[idx][..., 0])] for idx in range(len(test_predictions))]
-        recall_scores = [[recall(test_predictions[idx], labels[idx][..., 0])] for idx in range(len(test_predictions))]
-        precision_scores = [[precision(test_predictions[idx], labels[idx][..., 0])] for idx in range(len(test_predictions))]
+        dice_scores = [[dice(postprocessed_predictions[idx], labels[idx][..., 0])] for idx in range(len(postprocessed_predictions))]
+        recall_scores = [[recall(postprocessed_predictions[idx], labels[idx][..., 0])] for idx in range(len(postprocessed_predictions))]
+        precision_scores = [[precision(postprocessed_predictions[idx], labels[idx][..., 0])] for idx in range(len(postprocessed_predictions))]
 
         # Save metrics to calculate statistics over folds
         stack = np.hstack((dice_scores, recall_scores, precision_scores))
-        df = pd.DataFrame(stack, columns=["dice", "precision", "recall"])
+        df = pd.DataFrame(stack, columns=["dice", "recall", "precision"])
+        df["image_basename"] = batch_df["image_basename"]
+        df["fold"] = batch_id
         self.metrics_scores = self.metrics_scores.append(df)
 
-        self._log(df.describe())
+        self.logger.log(df.describe())
 
-    def log_metrics(self, output_folder):
+    def aggregate_metrics_for_all_batches(self,
+                                          output_dir=None):
 
-        self._log(self.metrics_scores.describe())
-        self.metrics_scores.to_csv(os.path.join(output_folder, "metrics.csv"), index=False)
+        self.logger.log(self.metrics_scores.describe())
+        self.metrics_scores.to_csv(os.path.join(output_dir, "metrics.csv"), index=False)
 
         sns.set(style="whitegrid")
         sns.boxplot(data=self.metrics_scores)
-        plt.savefig(os.path.join(output_folder, "boxplot.png"))
+        plt.savefig(os.path.join(output_dir, "boxplot.png"))
 
-    def _save_data(self, predictions, data, original_data, data_info, output_dir, run_mode):
+    def save_data_batch(self,
+                        postprocessed_predictions,
+                        output_dir,
+                        not_postprocessed_predictions=None,
+                        preprocessed_data_and_labels=None,
+                        not_preprocessed_data_and_labels=None,
+                        batch_df=None,
+                        batch_id=0):
+
+        output_dir = os.path.join(output_dir, self.predictions_dir)
 
         # Create folder for auxiliary outputs
         auxiliary_output_dir = os.path.join(output_dir, "auxiliary")
         if not os.path.exists(auxiliary_output_dir):
             os.makedirs(auxiliary_output_dir)
 
-        for prediction_idx, prediction in enumerate(predictions):
+        for prediction_idx, prediction in enumerate(postprocessed_predictions):
 
-            info_row = data_info.iloc[prediction_idx]
+            info_row = batch_df.iloc[prediction_idx]
             img_name = os.path.basename(info_row[self.data_path_column])
 
-            image = original_data[0][prediction_idx]
+            image = not_preprocessed_data_and_labels[0][prediction_idx]
             rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
             masks = list()
             contour_colors = list()
+
+            not_postprocessed_prediction = not_postprocessed_predictions[prediction_idx][..., 0]
+            resized_not_postprocessed_prediction = cv2.resize(not_postprocessed_prediction, (rgb_image.shape[1], rgb_image.shape[0]), interpolation=cv2.INTER_LINEAR)
+            resized_not_postprocessed_prediction = (resized_not_postprocessed_prediction * 255).astype(np.uint8)
 
             resized_prediction = cv2.resize(prediction, (rgb_image.shape[1], rgb_image.shape[0]), interpolation=cv2.INTER_NEAREST)
             resized_prediction = resized_prediction.astype(np.uint8) * 255
             masks.append(resized_prediction)
             contour_colors.append((0, 0, 255))  # blue contour for prediction
 
-            if run_mode == RunMode.TEST:
-                masks.append(original_data[1][prediction_idx])
-                contour_colors.append((0, 255, 0))  # green contour for ground truth
+            masks.append(not_preprocessed_data_and_labels[1][prediction_idx])
+            contour_colors.append((0, 255, 0))  # green contour for ground truth
 
             output_path = os.path.join(output_dir, img_name)
             contours_plot(image, masks, contour_colors, outputs_path=output_path)
 
             auxiliary_output_path = os.path.join(output_dir, "auxiliary", img_name)
-            cv2.imwrite(auxiliary_output_path, resized_prediction)
+            cv2.imwrite(auxiliary_output_path, resized_not_postprocessed_prediction)
 
-    def save_tested_data(self, test_predictions, test_data, original_test_data, fold_test_info, fold_num, output_folder):
-
-        output_folder = os.path.join(output_folder, self.predictions_dir)
-        if not os.path.exists(output_folder):
-            os.makedirs(output_folder)
-
-        self._save_data(test_predictions, test_data, original_test_data, fold_test_info, output_folder, RunMode.TEST)
-
-    def save_inferenced_data(self, inference_predictions, inference_data, original_inference_data, batch_inference_info, batch_num, output_folder):
-
-        output_folder = os.path.join(output_folder, self.predictions_dir)
-        if not os.path.exists(output_folder):
-            os.makedirs(output_folder)
-
-        self._save_data(inference_predictions, inference_data, original_inference_data, batch_inference_info, output_folder, RunMode.INFERENCE)
+    # def save_tested_data(self, test_predictions, test_data, original_test_data, fold_test_info, fold_num, output_folder):
+    #
+    #     output_folder = os.path.join(output_folder, self.predictions_dir)
+    #     if not os.path.exists(output_folder):
+    #         os.makedirs(output_folder)
+    #
+    #     self._save_data(test_predictions, test_data, original_test_data, fold_test_info, output_folder, RunMode.TEST)
+    #
+    # def save_inferenced_data(self, inference_predictions, inference_data, original_inference_data, batch_inference_info, batch_num, output_folder):
+    #
+    #     output_folder = os.path.join(output_folder, self.predictions_dir)
+    #     if not os.path.exists(output_folder):
+    #         os.makedirs(output_folder)
+    #
+    #     self._save_data(inference_predictions, inference_data, original_inference_data, batch_inference_info, output_folder, RunMode.INFERENCE)
 
