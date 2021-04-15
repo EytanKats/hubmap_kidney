@@ -10,8 +10,8 @@ from simple_converge.utils.dataset_utils import load_dataset_file, rle_to_mask, 
 # Define settings
 raw_images_template = "/data/eytank/datasets/hubmap_kidney/raw_data/images/train/*.tiff"
 
-output_images_dir = "/data/eytank/datasets/hubmap_kidney/images_256"
-output_masks_dir = "/data/eytank/datasets/hubmap_kidney/masks_256"
+output_images_dir = "/data/eytank/datasets/hubmap_kidney/images256_step128"
+output_masks_dir = "/data/eytank/datasets/hubmap_kidney/masks256_step128"
 output_dataset_file_path = "/data/eytank/datasets/hubmap_kidney/ds_tile1024_step1024.csv"
 
 train_dataset = True
@@ -45,6 +45,8 @@ for raw_image_path in raw_images_paths:
     raw_image = tiff.imread(raw_image_path)
     if len(raw_image.shape) == 5:
         raw_image = raw_image.squeeze()
+        raw_image = np.transpose(raw_image, (1, 2, 0))
+    elif len(raw_image.shape) == 3 and raw_image.shape[0] == 3:
         raw_image = np.transpose(raw_image, (1, 2, 0))
 
     print("Loaded image with shape ({0}, {1})".format(raw_image.shape[0], raw_image.shape[1]))

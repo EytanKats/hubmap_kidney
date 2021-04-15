@@ -8,7 +8,6 @@ import albumentations as alb
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-
 from simple_converge.utils.RunMode import RunMode
 from simple_converge.plots.plots import contours_plot
 from simple_converge.metrics.metrics import dice, recall, precision
@@ -246,7 +245,9 @@ class Dataset(BaseDataset):
 
         # Save metrics to calculate statistics over folds
         stack = np.hstack((dice_scores, recall_scores, precision_scores))
-        df = pd.DataFrame(stack, columns=["dice", "precision", "recall"])
+        df = pd.DataFrame(stack, columns=["dice", "recall", "precision"])
+        df["image_basename"] = batch_df["image_basename"]
+        df["fold"] = batch_id
         self.metrics_scores = self.metrics_scores.append(df)
 
         self.logger.log(df.describe())
@@ -270,6 +271,8 @@ class Dataset(BaseDataset):
                         batch_df=None,
                         batch_id=0):
 
+        output_dir = os.path.join(output_dir, self.predictions_dir)
+
         # Create folder for auxiliary outputs
         auxiliary_output_dir = os.path.join(output_dir, "auxiliary")
         if not os.path.exists(auxiliary_output_dir):
@@ -286,20 +289,23 @@ class Dataset(BaseDataset):
             masks = list()
             contour_colors = list()
 
+            not_postprocessed_prediction = not_postprocessed_predictions[prediction_idx][..., 0]
+            resized_not_postprocessed_prediction = cv2.resize(not_postprocessed_prediction, (rgb_image.shape[1], rgb_image.shape[0]), interpolation=cv2.INTER_LINEAR)
+            resized_not_postprocessed_prediction = (resized_not_postprocessed_prediction * 255).astype(np.uint8)
+
             resized_prediction = cv2.resize(prediction, (rgb_image.shape[1], rgb_image.shape[0]), interpolation=cv2.INTER_NEAREST)
             resized_prediction = resized_prediction.astype(np.uint8) * 255
             masks.append(resized_prediction)
             contour_colors.append((0, 0, 255))  # blue contour for prediction
 
-            # if run_mode == RunMode.TEST:
-            #     masks.append(original_data[1][prediction_idx])
-            #     contour_colors.append((0, 255, 0))  # green contour for ground truth
+            masks.append(not_preprocessed_data_and_labels[1][prediction_idx])
+            contour_colors.append((0, 255, 0))  # green contour for ground truth
 
             output_path = os.path.join(output_dir, img_name)
             contours_plot(image, masks, contour_colors, outputs_path=output_path)
 
             auxiliary_output_path = os.path.join(output_dir, "auxiliary", img_name)
-            cv2.imwrite(auxiliary_output_path, resized_prediction)
+            cv2.imwrite(auxiliary_output_path, resized_not_postprocessed_prediction)
 
     # def save_tested_data(self, test_predictions, test_data, original_test_data, fold_test_info, fold_num, output_folder):
     #

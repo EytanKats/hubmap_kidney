@@ -23,6 +23,8 @@ for idx, rle_encoding in df_rle_encodings.iterrows():
     if len(image.shape) == 5:
         image = image.squeeze()
         image = np.transpose(image, (1, 2, 0))
+    elif len(image.shape) == 3 and image.shape[0] == 3:
+        image = np.transpose(image, (1, 2, 0))
 
     # Get binary glomeruli mask from RLE encoding
     glomeruli_mask = rle_to_mask(rle_encoding["encoding"], (image.shape[0], image.shape[1]))

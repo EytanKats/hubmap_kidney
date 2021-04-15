@@ -1,316 +1,207 @@
 import os
 import gc
 import cv2
-import glob
 import pathlib
+import rasterio
+
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-import tifffile as tiff
 
-from simple_converge.plots.plots import overlay_plot
+import matplotlib.pyplot as plt
+
+from tqdm import tqdm
+from rasterio.windows import Window
 from simple_converge.metrics.metrics import dice, precision, recall
-from simple_converge.utils.dataset_utils import rle_to_mask, mask_to_rle, load_dataset_file
-
-test = True
-
-tiff_images_template = "/data/eytank/datasets/hubmap_kidney/raw_data/images/train/095bf7a1f*"
-rle_encodings_path = "/data/eytank/datasets/hubmap_kidney/raw_data/annotations/train/train.csv"
-model_dir = "/data/eytank/simulations/hubmap_kidney/2021.01.29_sm_unet_efficientnetb4_pretrained/1/model/"
-
-# anatomical_structure_suffix = "-anatomical-structure.json"
-
-tiles_dir = "/data/eytank/simulations/hubmap_kidney/2021.01.29_sm_unet_efficientnetb4_pretrained/1/inference_tiles"
-predictions_dir = "/data/eytank/simulations/hubmap_kidney/2021.01.29_sm_unet_efficientnetb4_pretrained/1/inference_predictions"
-results_dir = "/data/eytank/simulations/hubmap_kidney/2021.01.29_sm_unet_efficientnetb4_pretrained/1/inference_results"
 
 
-submission_file_path = "/data/eytank/simulations/hubmap_kidney/2021.01.29_sm_unet_efficientnetb4_pretrained/1/inference_results/submission.csv"
-scores_file_path = "/data/eytank/simulations/hubmap_kidney/2021.01.29_sm_unet_efficientnetb4_pretrained/1/inference_results/scores.csv"
+TRAIN_DATA_DIR = "/data/eytank/datasets/hubmap_kidney/raw_data/images/train/"
+MODEL_DIR = "/data/eytank/simulations/hubmap_kidney/2021.03.27_smefficientnetb4_updateddata/0/model/"
+MASKS_CSV_FILE_PATH = "/data/eytank/datasets/hubmap_kidney/raw_data/annotations/train/train.csv"
+RESULTS_FILE_PATH = "/data/eytank/simulations/hubmap_kidney/2021.03.27_smefficientnetb4_updateddata/0/scores_512_512_tta.csv"
+IMAGES_TO_TEST = ["0486052bb.tiff", "095bf7a1f.tiff", "1e2425f28.tiff"]  # fold 0
 
-tile_size = 1024
-tile_step = 1024
-resize_shape = (256, 256)
-sat_thr = 40
-num_pixels_thr = 10000
+CHOOSE_RANDOM_TILES = False
+RANDOM_TILES_NUM = 100
+PLOT_TILE_PREDICTIONS = False
 
-prediction_batch_size = 64
+TILE_SIZE = (1024, 1024)
+TILE_STEP = (512, 512)
+
+TTA_ROTATION = True
+
+PREDICTION_THRESHOLD = 0.5
+AGGREGATION_THRESHOLD = 0.5
+
+APPLY_PREDICTION_FILTER = True
+prediction_filter = np.zeros(shape=TILE_SIZE, dtype=np.uint8)
+prediction_filter[256:768, 256:768] = 1
 
 
-def remove_holes(binary_mask):
+def make_grid(shape, window_x, window_y, step_x, step_y):
 
-    postprocessed_mask = np.copy(binary_mask)
-    im_floodfill = np.copy(postprocessed_mask)
+    xs = np.arange(0, shape[0] - window_x, step=step_x)
+    ys = np.arange(0, shape[1] - window_y, step=step_y)
 
-    h, w = postprocessed_mask.shape[:2]
-    binary_mask = np.zeros((h + 2, w + 2), np.uint8)
+    slices = np.zeros((len(xs), len(ys), 4), dtype=np.int32)
+    for x_idx, x_left in enumerate(xs):
+        for y_idx, y_top in enumerate(ys):
+            slices[x_idx, y_idx] = x_left, x_left + window_x, y_top, y_top + window_y
 
-    cv2.floodFill(im_floodfill, binary_mask, (0, 0), 2)
-    cv2.floodFill(im_floodfill, binary_mask, (0, resize_shape[0] - 1), 2)
-    cv2.floodFill(im_floodfill, binary_mask, (resize_shape[1] - 1, 0), 2)
-    cv2.floodFill(im_floodfill, binary_mask, (resize_shape[1] - 1, resize_shape[0] - 1), 2)
+    return slices.reshape(len(xs) * len(ys), 4)
 
-    postprocessed_mask[im_floodfill != 2] = 1
 
-    del im_floodfill
-    del binary_mask
+def enc2mask(encs, shape):
+    img = np.zeros(shape[0] * shape[1], dtype=np.uint8)
+    for m, enc in enumerate(encs):
+
+        if isinstance(enc, np.float) and np.isnan(enc):
+            continue
+
+        s = enc.split()
+        for i in range(len(s) // 2):
+            start = int(s[2 * i]) - 1
+            length = int(s[2 * i + 1])
+            img[start:start + length] = 1 + m
+
+    return img.reshape(shape).T
+
+
+# Load model
+print("\nLoading model {0}".format(os.path.basename(MODEL_DIR)))
+model = tf.keras.models.load_model(MODEL_DIR)
+
+# Load annotations file
+df_masks = pd.read_csv(MASKS_CSV_FILE_PATH).set_index('id')
+
+# Initialize metrics placeholders
+dice_scores = list()
+precision_scores = list()
+recall_scores = list()
+
+# Iterate other images and make predictions
+for img_name in IMAGES_TO_TEST:
+
+    # Read image and corresponding mask
+    img_data = rasterio.open(os.path.join(TRAIN_DATA_DIR, img_name), transform=rasterio.Affine(1, 0, 0, 0, 1, 0))
+    mask = enc2mask(df_masks.loc[pathlib.Path(img_name).stem], (img_data.shape[1], img_data.shape[0]))
+
+    if img_data.count != 3:
+        subdatasets = img_data.subdatasets
+        layers = []
+        if len(subdatasets) > 0:
+            for i, subdataset in enumerate(subdatasets, 0):
+                layers.append(rasterio.open(subdataset))
+
+    # Make tiles grid
+    tiles = make_grid(img_data.shape, TILE_SIZE[0], TILE_SIZE[1], TILE_STEP[0], TILE_STEP[1])
+
+    # Choose random tile indices and make predictions for chosen tiles
+    if CHOOSE_RANDOM_TILES:
+        tiles = [tiles[idx] for idx in np.random.choice(np.arange(0, len(tiles)), RANDOM_TILES_NUM)]
+
+    # Initialize predictions mask and run model on tiles
+    predictions_mask = np.zeros(img_data.shape, dtype=np.uint8)
+    for (x1, x2, y1, y2) in tqdm(tiles, desc=img_name):
+
+        # Crop tile from the image
+        if img_data.count == 3:
+            img = img_data.read([1, 2, 3], window=Window.from_slices((x1, x2), (y1, y2)))
+            img = np.moveaxis(img, 0, -1)
+        else:
+            img = np.zeros((1024, 1024, 3), dtype=np.uint8)
+            for i, layer in enumerate(layers):
+                img[:, :, i] = layer.read(1, window=Window.from_slices((x1, x2), (y1, y2)))
+
+        # Crop tile from the mask
+        mask_tile = mask[x1:x2, y1:y2]
+
+        # Preprocess image
+        bgr_img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        pre_bgr_img = cv2.resize(bgr_img, (256, 256), interpolation=cv2.INTER_LINEAR)
+        pre_bgr_img = pre_bgr_img.astype(np.float32)
+        pre_bgr_img = tf.keras.applications.resnet50.preprocess_input(pre_bgr_img)
+
+        # Apply test time augmentation
+        if TTA_ROTATION:
+            pre_bgr_img_tta_list = [pre_bgr_img]
+            for rot in [1, 2, 3]:
+                pre_bgr_img_tta_list.append(np.rot90(pre_bgr_img, k=rot, axes=(0, 1)))
+            pre_bgr_img = np.array(pre_bgr_img_tta_list)
+        else:
+            pre_bgr_img = np.expand_dims(pre_bgr_img, 0)
+
+        # Predict
+        bgr_pred = model.predict(pre_bgr_img)
+
+        # Apply test time augmentation
+        if TTA_ROTATION:
+            bgr_pred_tta_sum = bgr_pred[0, ...]
+            for rot in [1, 2, 3]:
+                bgr_pred_tta_sum += np.rot90(bgr_pred[rot, ...], k=rot, axes=(1, 0))
+            bgr_pred = bgr_pred_tta_sum / 4
+        else:
+            bgr_pred = np.squeeze(bgr_pred)
+
+        # Postprocess prediction
+        bgr_pred = (bgr_pred > PREDICTION_THRESHOLD).astype(np.uint8)
+        bgr_pred = cv2.resize(bgr_pred, (1024, 1024), interpolation=cv2.INTER_NEAREST)
+
+        if APPLY_PREDICTION_FILTER:
+            bgr_pred *= prediction_filter
+
+        # Fill appropriate region in predictions mask
+        predictions_mask[x1:x2, y1:y2] += bgr_pred
+
+        # Plot tile predictions
+        if PLOT_TILE_PREDICTIONS:
+            fig = plt.figure(figsize=(10, 10))
+
+            fig.add_subplot(1, 2, 1)
+            plt.axis('off')
+            plt.imshow(img)
+            plt.imshow(bgr_pred, alpha=0.5)
+
+            fig.add_subplot(1, 2, 2)
+            plt.axis('off')
+            plt.imshow(mask_tile)
+            plt.imshow(bgr_pred, alpha=0.5)
+
+            plt.savefig()
+
+    del img, bgr_img, pre_bgr_img, mask_tile, bgr_pred
     gc.collect()
 
-    return postprocessed_mask
+    # Postprocess predictions mask
+    predictions_mask = (predictions_mask >= AGGREGATION_THRESHOLD).astype(np.uint8)
 
+    # Calculate metrics
+    print("Calculating metrics for image {0}".format(img_name))
+    dice_for_image = dice(predictions_mask, mask)
+    precision_for_image = precision(predictions_mask, mask)
+    recall_for_image = recall(predictions_mask, mask)
 
-print("\nCreating test dataset from raw data")
+    dice_scores.append(dice_for_image)
+    precision_scores.append(precision_for_image)
+    recall_scores.append(recall_for_image)
 
-# Create tiles temporary dir
-if not os.path.exists(tiles_dir):
-    os.makedirs(tiles_dir)
+    print(" - dice = {0}".format(dice_for_image))
+    print(" - precision = {0}".format(precision_for_image))
+    print(" - recall = {0}".format(recall_for_image))
 
-# Load ground truth RLE encodings
-if test:
-    rle_encodings_gt = load_dataset_file(rle_encodings_path).set_index("id")
-    dice_scores = list()
-    precision_scores = list()
-    recall_scores = list()
-
-# Create test dataset
-inference_images_dir = os.path.dirname(tiff_images_template)
-inference_images_paths = glob.glob(os.path.join(tiff_images_template))
-inference_images_names = list()
-tiles_paths = list()
-for inference_image_path in inference_images_paths:
-
-    # Read image
-    print(" - loading image {0}".format(os.path.basename(inference_image_path)))
-    image_name = pathlib.Path(inference_image_path).stem
-    inference_images_names.append(image_name)
-
-    image = tiff.imread(inference_image_path)
-
-    if len(image.shape) == 5:
-        image = image.squeeze()
-        image = np.transpose(image, (1, 2, 0))
-
-    # Create tiles
-    print(" - creating tiles for image {0} with shape {1}".format(os.path.basename(inference_image_path), image.shape))
-    cur_num_tiles = len(tiles_paths)
-    for x in range(0, image.shape[1] - tile_size, tile_step):
-        for y in range(0, image.shape[0] - tile_size, tile_step):
-
-            tile_image = image[y: y + tile_size, x: x + tile_size]
-
-            # Check saturation threshold
-            hsv_tile_image = cv2.cvtColor(tile_image, cv2.COLOR_BGR2HSV)
-            h, s, v = cv2.split(hsv_tile_image)
-            if (s > sat_thr).sum() > num_pixels_thr:
-                output_path_tile = os.path.join(tiles_dir, image_name + "_" + str(x) + "_" + str(y) + ".png")
-                tiles_paths.append(output_path_tile)
-
-                tile_image = cv2.resize(tile_image, resize_shape, interpolation=cv2.INTER_LINEAR)
-                cv2.imwrite(output_path_tile, tile_image)
-
-            del tile_image
-            del hsv_tile_image
-            del h
-            del s
-            del v
-
-    del image
+    del mask, predictions_mask, img_data, tiles
     gc.collect()
 
-    print(" - number of tiles for image {0} is {1}".format(os.path.basename(inference_image_path), len(tiles_paths) - cur_num_tiles))
+# Fill CSV file with metrics and save it
+df_results = pd.DataFrame()
+df_results["id"] = IMAGES_TO_TEST
+df_results["dice"] = dice_scores
+df_results["precision"] = precision_scores
+df_results["recall"] = recall_scores
+df_results.to_csv(os.path.join(RESULTS_FILE_PATH), index=False)
 
-print("\nLoading model {0}".format(os.path.basename(model_dir)))
-model = tf.keras.models.load_model(model_dir)
+del model, df_results
+gc.collect()
 
-print("\nPredicting glomeruli regions")
-print(" - batch size is {0}, number of batches is {1}".format(prediction_batch_size, len(tiles_paths) // prediction_batch_size + 1))
-
-# Create predictions directory
-if not os.path.exists(predictions_dir):
-    os.makedirs(predictions_dir)
-
-predictions_paths = list()
-for batch in range(len(tiles_paths) // prediction_batch_size + 1):
-
-    print(" - loading batch {0} data".format(batch))
-    batch_data = list()
-    batch_tiles_paths = tiles_paths[batch * prediction_batch_size: (batch + 1) * prediction_batch_size]
-    for tile_path in batch_tiles_paths:
-        tile = cv2.imread(tile_path)
-        tile = cv2.cvtColor(tile, cv2.COLOR_BGR2RGB)
-
-        tile = tile.astype(np.float32)
-        tile = tf.keras.applications.resnet50.preprocess_input(tile)
-
-        # Test time augmentation (TTA)
-        # tile_90 = np.rot90(tile, k=1, axes=(0, 1))
-        # tile_180 = np.rot90(tile, k=2, axes=(0, 1))
-        # tile_270 = np.rot90(tile, k=3, axes=(0, 1))
-
-        batch_data.append(tile)
-        # batch_data.append(tile_90)
-        # batch_data.append(tile_180)
-        # batch_data.append(tile_270)
-
-    batch_data = np.array(batch_data)
-
-    print(" - predicting batch {0}, batch shape is {1}".format(batch, batch_data.shape))
-    predictions = model.predict(np.array(batch_data))
-
-    print(" - postprocessing predictions for batch {0}".format(batch))
-    #     for prediction_idx in range(len(predictions) // 4):
-    for prediction_idx in range(len(predictions)):
-        # Merge TTA predictions
-        # post_processed_prediction = predictions[prediction_idx * 4][..., 0]
-        # for tta_idx in range(1, 4):
-        #     tta_prediction = predictions[prediction_idx * 4 + tta_idx][..., 0]
-        #     tta_prediction = np.rot90(tta_prediction, k=tta_idx, axes=(1, 0))
-        #     post_processed_prediction += tta_prediction
-        #
-        # post_processed_prediction = post_processed_prediction / 4
-
-        post_processed_prediction = predictions[prediction_idx][..., 0]
-
-        # Apply threshold on predicted mask
-        _, post_processed_prediction = cv2.threshold(post_processed_prediction, 0.5, 1, cv2.THRESH_BINARY)
-
-        # Fill connected components
-        post_processed_prediction = remove_holes(post_processed_prediction)
-
-        # Save postprocessed predictions
-        output_path_prediction = os.path.join(predictions_dir, os.path.basename(batch_tiles_paths[prediction_idx]))
-        predictions_paths.append(output_path_prediction)
-
-        cv2.imwrite(output_path_prediction, post_processed_prediction)
-
-        del post_processed_prediction
-
-    del batch_data
-    del predictions
-    gc.collect()
-
-# Create results dir
-if not os.path.exists(results_dir):
-    os.makedirs(results_dir)
-
-print("\nMerging glomeruli predictions to get full size segmentation mask")
-ids = list()
-encodings = list()
-for inference_image_name in inference_images_names:
-
-    # Read original image
-    print(" - loading image {0}".format(inference_image_name))
-    raw_image_path = os.path.join(inference_images_dir, inference_image_name + ".tiff")
-    image = tiff.imread(raw_image_path)
-
-    if len(image.shape) == 5:
-        image = image.squeeze()
-        image = np.transpose(image, (1, 2, 0))
-
-    print(" - creating full size mask from tiles predictions")
-
-    # Create mask placeholder
-    mask = np.zeros(shape=(image.shape[0], image.shape[1]), dtype=np.uint8)
-
-    # Get prediction_paths for the image
-    image_prediction_paths = [prediction_path for prediction_path in predictions_paths if inference_image_name in prediction_path]
-
-    # Create full-size mask
-    for image_prediction_path in image_prediction_paths:
-        prediction_mask = cv2.imread(image_prediction_path, cv2.IMREAD_GRAYSCALE)
-
-        image_prediction_name = pathlib.Path(image_prediction_path).stem
-        x = int(image_prediction_name.split('_')[1])
-        y = int(image_prediction_name.split('_')[2])
-
-        prediction_mask = cv2.resize(prediction_mask, (tile_size, tile_size), interpolation=cv2.INTER_NEAREST)
-        mask[y: y + tile_size, x: x + tile_size] = prediction_mask
-
-        del prediction_mask
-
-    # # Check if cortex mask and if yes use it to remove false positives outside of the cortex mask
-    # anatomical_structure_path = os.path.join(inference_images_dir, inference_image_name + anatomical_structure_suffix)
-    # if os.path.exists(anatomical_structure_path):
-    #
-    #    print(" - creating cortex mask")
-    #    cortex_mask = np.zeros(shape=mask.shape, dtype=np.uint8)
-    #    df_anatomical_structure = pd.read_json(anatomical_structure_path)
-    #    for _, row in df_anatomical_structure.iterrows():
-    #
-    #        if row["properties"]["classification"]["name"] != "Cortex":
-    #            continue
-    #
-    #        coordinates = row["geometry"]["coordinates"]
-    #        if row["geometry"]["type"] == "MultiPolygon":
-    #
-    #            for polygon_pts in coordinates:
-    #                cv2.fillPoly(cortex_mask, pts=[np.array(polygon_pts[0], dtype=np.int32)], color=1)
-    #
-    #        else:
-    #            cv2.fillPoly(cortex_mask, pts=[np.array(coordinates[0], np.int32)], color=1)
-    #
-    #     print(" - removing glomeruli predictions outside of cortex mask")
-    #     mask = cortex_mask * mask
-    #
-    #     del cortex_mask
-
-    print(" - encoding mask to RLE")
-    # Encode mask to RLE
-    encoding = mask_to_rle(mask)
-    encodings.append(encoding)
-    ids.append(inference_image_name)
-
-    overlays = list()
-    colors = list()
-    # Calculate metrics and create ground truth overlay
-    if test:
-
-        print(" - calculating scores")
-        gt_mask = rle_to_mask(rle_encodings_gt.loc[inference_image_name]["encoding"], (image.shape[0], image.shape[1]))
-
-        dice_scores.append(dice(mask, gt_mask))
-        precision_scores.append(precision(mask, gt_mask))
-        recall_scores.append(recall(mask, gt_mask))
-
-        small_gt_mask = cv2.resize(gt_mask, (5000, 5000), interpolation=cv2.INTER_NEAREST)
-        small_gt_mask = small_gt_mask * 255
-
-        overlays.append(small_gt_mask)
-        colors.append(1)
-
-    print(" - saving downscaled overlay image")
-    # Resize image and mask for visualization
-    small_image = cv2.resize(image, (5000, 5000), interpolation=cv2.INTER_LINEAR)
-    small_image = cv2.cvtColor(small_image, cv2.COLOR_RGB2GRAY)
-
-    small_mask = cv2.resize(mask, (5000, 5000), interpolation=cv2.INTER_NEAREST)
-    small_mask = small_mask * 255
-
-    overlays.append(small_mask)
-    colors.append(2)
-
-    output_path = os.path.join(results_dir, inference_image_name + ".png")
-    overlay_plot(small_image, overlays, colors, outputs_path=output_path)
-
-    del image
-    del mask
-    del small_image
-    del small_mask
-    gc.collect()
-
-print("\nSaving submission file")
-# Populate pandas dataframe with encodings
-df = pd.DataFrame()
-df["id"] = ids
-df["predicted"] = encodings
-df.to_csv(submission_file_path, index=False)
-
-print("\nSaving scores file")
-if test:
-    # Populate pandas dataframe with scores
-    df = pd.DataFrame()
-    df["id"] = ids
-    df["dice"] = dice_scores
-    df["precision"] = precision_scores
-    df["recall"] = recall_scores
-    df.to_csv(scores_file_path, index=False)
+print("End of script")
+exit()

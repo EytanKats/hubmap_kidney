@@ -12,14 +12,14 @@ class Settings(object):
         self.dataset_args["resize_shape"] = (256, 256)
 
         self.dataset_args["postprocessing_thr"] = 0.5
-        self.dataset_args["predictions_folder"] = "predictions"
+        self.dataset_args["predictions_dir"] = "predictions"
 
         # DataSplitter arguments ##############################################
         self.data_splitter_args = dict()
 
         self.data_splitter_args["data_definition_file_path"] = "/data/eytank/datasets/hubmap_kidney/ds_tile1024_step1024_sampled.csv"
 
-        self.data_splitter_args["folds_num"] = 8
+        self.data_splitter_args["folds_num"] = 6
         self.data_splitter_args["data_random_seed"] = 1509
 
         self.data_splitter_args["train_data_file_name"] = "train_data.json"
@@ -30,7 +30,7 @@ class Settings(object):
         self.data_splitter_args["group_column"] = ""
         self.data_splitter_args["group_ids"] = None
 
-        self.data_splitter_args["leave_out"] = True  # allows to choose for test data with unique values of 'self.leave_out_param'
+        self.data_splitter_args["leave_out"] = True  # allows to choose for test data with unique values of 'self.leave_out_column'
         self.data_splitter_args["leave_out_column"] = "raw_image_id"
         self.data_splitter_args["leave_out_values"] = None
 
@@ -139,7 +139,7 @@ class Settings(object):
         self.logger_args["file_name"] = "results.log"
 
         # Output settings
-        self.simulation_folder = "/data/eytank/simulations/hubmap_kidney/2021.01.29_sm_unet_efficientnetb4_pretrained"
+        self.simulation_folder = "/data/eytank/simulations/hubmap_kidney/2021.03.27_smefficientnetb4_updateddata"
         self.training_log_name = "metrics.log"
         self.settings_file_name = "../Settings.py"
         self.saved_model_name = "model"
@@ -159,14 +159,15 @@ class Settings(object):
         self.inference_data_pattern = ""
 
         # Model training settings
-        self.training_folds = [4, 6]
+        self.training_folds = [0, 1]
         self.load_model = False
         self.load_model_path = ""  # list for train/test, string for inference
 
         self.logs_dir = self.simulation_folder
         self.log_message = "Kidney glomeruli segmentation\n" \
-                           "simple_converge 0.5.6\n" \
+                           "simple_converge 0.5.7\n" \
                            "'Segmentation Models' UNet architecture with EfficientNetB4 pretrained backbone\n" \
+                           "Using updated dataset\n" \
                            "Using overlapped images during training\n" \
                            "Using basic augmentations: flip left-right, flip up-down, rotations to 90/180/270 degrees"
 
